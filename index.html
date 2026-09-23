@@ -1,0 +1,2542 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jish Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .serif { font-family: 'Instrument Serif', serif; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-[#faf6f3] text-zinc-800 antialiased min-h-screen">
+
+<div id="app"></div>
+
+<!-- Custom Toast / Alert -->
+<div id="toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-6 py-3 rounded-full text-sm font-medium shadow-xl transition-all"></div>
+
+<!-- Modal Pilih Kurir (Admin) -->
+<div id="courierModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-zinc-100">
+    <div class="flex justify-between items-center pb-3 border-b">
+      <h3 class="font-bold text-base text-zinc-900">🛵 Pilih Kurir Pengantar</h3>
+      <button onclick="closeCourierModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
+    </div>
+    <p class="text-xs text-zinc-500 mt-2">Pilih kurir yang bertugas mengantarkan pesanan ini ke alamat pembeli:</p>
+    
+    <div id="courierSelectionList" class="mt-4 space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+    <div class="mt-5 flex gap-2">
+      <button onclick="confirmCourierAssignment()" class="flex-1 bg-purple-900 hover:bg-purple-950 text-white py-2.5 rounded-xl font-bold text-xs shadow-md transition-all">
+        💾 Simpan & Ambil Kurir
+      </button>
+      <button onclick="closeCourierModal()" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-4 py-2.5 rounded-xl font-bold text-xs">
+        Batal
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi WhatsApp Status "Dalam Pengiriman" (Admin) -->
+<div id="shippingWaModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-100">
+    <div class="flex justify-between items-center pb-3 border-b">
+      <h3 class="font-bold text-base text-zinc-900">📲 Konfirmasi Pengiriman WhatsApp</h3>
+      <button onclick="closeShippingWaModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
+    </div>
+    
+    <div class="mt-4 space-y-4">
+      <div id="courierSelectContainer">
+        <label class="text-xs font-bold text-zinc-800 block mb-1.5">1. Pilih Kurir Yang Bertugas <span id="courierReqStar" class="text-red-500">*</span></label>
+        <select id="shippingCourierSelect" class="w-full text-xs p-3 rounded-2xl border border-zinc-200 bg-[#faf6f3] font-medium outline-none focus:border-purple-600">
+          <option value="">-- Pilih Kurir Bertugas --</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-zinc-800 block mb-1.5">2. Pilih Tujuan Kirim Pesan WhatsApp <span class="text-red-500">*</span></label>
+        <div id="shippingWaTargetList" class="space-y-2 text-xs">
+          <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#faf6f3] cursor-pointer hover:border-purple-300">
+            <input type="radio" name="shippingWaTarget" value="buyer" class="accent-purple-800">
+            <div>
+              <span class="font-bold text-zinc-900 block">Kirim ke Pembeli saja</span>
+              <span class="text-[10px] text-zinc-500">Notifikasi bahwa pesanan sedang dalam pengiriman / siap diambil</span>
+            </div>
+          </label>
+          <label id="optCourierOnly" class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#faf6f3] cursor-pointer hover:border-purple-300">
+            <input type="radio" name="shippingWaTarget" value="courier" class="accent-purple-800">
+            <div>
+              <span class="font-bold text-zinc-900 block">Kirim ke Kurir saja</span>
+              <span class="text-[10px] text-zinc-500">Instruksi pengantaran barang dan detail alamat pembeli</span>
+            </div>
+          </label>
+          <label id="optBoth" class="flex items-center gap-2.5 p-3 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:border-purple-300">
+            <input type="radio" name="shippingWaTarget" value="both" checked class="accent-purple-800">
+            <div>
+              <span class="font-bold text-purple-950 block">Kirim ke Keduanya (Pembeli & Kurir)</span>
+              <span class="text-[10px] text-purple-700">Membuka pesan WhatsApp untuk Pembeli dan Kurir sekaligus</span>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 flex gap-2">
+      <button onclick="executeShippingWaConfirmation()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs shadow-md transition-all">
+        💬 Konfirmasi & Kirim WA
+      </button>
+      <button onclick="closeShippingWaModal()" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-5 py-3 rounded-xl font-bold text-xs">
+        Batal
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detail Produk (Pembeli) -->
+<div id="productDetailModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 p-4 flex items-end sm:items-center justify-center overflow-y-auto">
+  <div class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-3xl p-6 shadow-2xl border border-zinc-100 max-h-[90vh] overflow-y-auto relative">
+    <button onclick="closeProductDetailModal()" class="absolute top-4 right-4 w-9 h-9 bg-zinc-100 hover:bg-zinc-200 rounded-full flex items-center justify-center font-bold text-sm z-10 transition-colors">✕</button>
+    <div id="productDetailContent"></div>
+  </div>
+</div>
+
+<!-- Modal Pengaturan Pembeli -->
+<div id="settingsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-zinc-100">
+    <div class="flex justify-between items-center pb-3 border-b mb-4">
+      <h3 class="font-bold text-base text-zinc-900">⚙️ Pengaturan Pembeli</h3>
+      <button onclick="closeSettingsModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
+    </div>
+    <div class="space-y-4">
+      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-100 space-y-2">
+        <h4 class="font-bold text-xs text-zinc-800 mb-1">👤 Profil Pembeli</h4>
+        <div>
+          <label class="text-[10px] font-bold text-zinc-500 block">Email Login</label>
+          <input id="buyerEmailInput" type="email" placeholder="Email Login Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-zinc-500 block">Nomor WhatsApp</label>
+          <input id="buyerPhoneInput" type="tel" placeholder="Nomor WA Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
+        </div>
+      </div>
+
+      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-100 space-y-2">
+        <h4 class="font-bold text-xs text-zinc-800 mb-1">🔒 Ganti Password</h4>
+        <input id="currentPass" type="password" placeholder="Password Lama" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
+        <input id="newPass" type="password" placeholder="Password Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
+        <input id="confirmNewPass" type="password" placeholder="Konfirmasi Password Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
+      </div>
+
+      <button onclick="updateBuyerSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md">Simpan Perubahan</button>
+      
+      <button onclick="logoutUser()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+        <span>🚪</span> Keluar Aplikasi
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- KONFIGURASI TOKO ---
+let adminAccount = JSON.parse(localStorage.getItem('ssr_admin_acc')) || {
+  email: "admin@toko.com",
+  pass: "admin123",
+  phone: "6283132317003"
+};
+
+let WA_NUMBER = adminAccount.phone;
+
+// --- STATE MANAGEMENT ---
+let products = JSON.parse(localStorage.getItem('ssr_v3')) || [
+  { 
+    id: 1, 
+    name: "Classic Sneaker White", 
+    price: 120000, 
+    stock: 0, 
+    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500", 
+    cat: "Shoes",
+    hasVariations: true,
+    colors: [
+      {
+        name: "Putih Classic",
+        image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500",
+        sizes: [
+          { size: "39", stock: 3 },
+          { size: "40", stock: 4 },
+          { size: "41", stock: 3 }
+        ]
+      },
+      {
+        name: "Hitam Premium",
+        image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=500",
+        sizes: [
+          { size: "39", stock: 2 },
+          { size: "40", stock: 0 },
+          { size: "41", stock: 5 }
+        ]
+      }
+    ]
+  },
+  { id: 2, name: "Linen Tote Bag Lavender", price: 88000, stock: 5, image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=500", cat: "Bags", hasVariations: false, colors: [] },
+  { id: 3, name: "Oversized Cotton Shirt", price: 135000, stock: 8, image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500", cat: "Apparel", hasVariations: false, colors: [] }
+];
+
+let thirdPartyProducts = JSON.parse(localStorage.getItem('ssr_tp')) || [
+  { 
+    id: 101, 
+    name: "Jaket Irjan Vintage", 
+    costPrice: 170000, 
+    price: 210000,     
+    stock: 4, 
+    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500", 
+    cat: "Apparel",
+    isThirdParty: true,
+    storeName: "Toko Irjan Polman",
+    storeAddress: "Rea Barat Jl. Bunga-Bunga, Matakali, Polewali Mandar",
+    storePhone: "083132317003",
+    hasVariations: false,
+    colors: []
+  }
+];
+
+let couriers = JSON.parse(localStorage.getItem('ssr_couriers')) || [
+  { id: 1, name: "Budi Santoso", phone: "081234567890", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" },
+  { id: 2, name: "Ahmad Rizki", phone: "085678901234", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" }
+];
+
+let cart = JSON.parse(localStorage.getItem('ssr_c')) || [];
+let buyers = JSON.parse(localStorage.getItem('ssr_b')) || [];
+let orders = JSON.parse(localStorage.getItem('ssr_o')) || [];
+let chatMessages = JSON.parse(localStorage.getItem('ssr_chat')) || [];
+
+let siteSettings = JSON.parse(localStorage.getItem('ssr_s')) || {
+  storeName: "Jish Store",
+  bannerImage: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800",
+  bannerTitle1: "Koleksi Terbaru",
+  bannerTitle2: "Jish Store",
+  bannerDesc: "Pilihan produk fashion & harian kualitas terbaik"
+};
+
+let categorySizes = JSON.parse(localStorage.getItem('ssr_cat_sizes')) || {
+  "Shoes": { hasSize: true, sizes: ["38", "39", "40", "41", "42", "43"] },
+  "Apparel": { hasSize: true, sizes: ["S", "M", "L", "XL", "XXL"] }
+};
+
+let deliverySettings = JSON.parse(localStorage.getItem('ssr_del_s')) || {
+  deliveryLabel: "🚚 Diantarkan ke Alamat",
+  pickupLabel: "🏪 Ambil Sendiri di Toko",
+  deliveryFee: 15000,
+  minQtyForDiscount: 3,
+  discountAmount: 10000,
+  selectedMethod: ""
+};
+
+let currentBuyer = JSON.parse(sessionStorage.getItem('ssr_cb') || 'null');
+let isAdmin = sessionStorage.getItem('ssr_ad') === '1';
+
+let view = isAdmin ? 'admin' : (currentBuyer ? 'shop' : 'gate');
+let adminTab = 'thirdparty';
+let filterCat = 'All';
+
+let buyerSearchQuery = '';
+let searchMainProductQuery = '';
+let searchTpStoreQuery = '';
+let searchTpItemQueries = {};
+
+let editId = null;
+let tempImg = '';
+let tempProductColors = [];
+
+let editTpId = null;
+let tempTpImg = '';
+let tempTpProductColors = [];
+
+let editCourierId = null;
+let tempCourierPhoto = '';
+
+let activeAssignOrderId = null;
+let selectedCourierIdInModal = null;
+let activeShippingWaOrderId = null;
+let tempBannerImg = '';
+
+// State Temp Detail Produk Pembeli Modal
+let activeDetailProduct = null;
+let selectedDetailColorIndex = 0;
+let selectedDetailSize = '';
+
+// State Temp untuk Accordion/Toggle Detail Pesanan di Admin
+let expandedOrders = {};
+
+// State Temp untuk Admin Chat
+let selectedAdminChatEmail = null;
+
+const save = () => {
+  localStorage.setItem('ssr_v3', JSON.stringify(products));
+  localStorage.setItem('ssr_tp', JSON.stringify(thirdPartyProducts));
+  localStorage.setItem('ssr_couriers', JSON.stringify(couriers));
+  localStorage.setItem('ssr_c', JSON.stringify(cart));
+  localStorage.setItem('ssr_b', JSON.stringify(buyers));
+  localStorage.setItem('ssr_o', JSON.stringify(orders));
+  localStorage.setItem('ssr_s', JSON.stringify(siteSettings));
+  localStorage.setItem('ssr_cat_sizes', JSON.stringify(categorySizes));
+  localStorage.setItem('ssr_del_s', JSON.stringify(deliverySettings));
+  localStorage.setItem('ssr_chat', JSON.stringify(chatMessages));
+  localStorage.setItem('ssr_admin_acc', JSON.stringify(adminAccount));
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+function getAllProducts() {
+  return [...products, ...thirdPartyProducts];
+}
+
+function toggleOrderDetails(orderId) {
+  expandedOrders[orderId] = !expandedOrders[orderId];
+  render();
+}
+
+// --- RENDER ROUTER ---
+function render() {
+  document.title = siteSettings.storeName;
+  const app = document.getElementById('app');
+  if (view === 'gate') app.innerHTML = gate();
+  else if (view === 'login') app.innerHTML = login();
+  else if (view === 'register') app.innerHTML = register();
+  else if (view === 'loginAdmin') app.innerHTML = loginAdmin();
+  else if (view === 'shop') app.innerHTML = shop();
+  else if (view === 'admin') app.innerHTML = isAdmin ? admin() : loginAdmin();
+  else if (view === 'history') app.innerHTML = currentBuyer ? history() : gate();
+  else if (view === 'chat') app.innerHTML = currentBuyer ? chatBuyer() : gate();
+  else app.innerHTML = gate();
+}
+
+function gate() {
+  return `
+  <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+    <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100 text-center">
+      <h1 class="serif text-4xl leading-none tracking-wide mb-8">${siteSettings.storeName}</h1>
+      <p class="text-sm font-semibold text-zinc-700 mb-4">Pilih Akses Masuk</p>
+      
+      <div class="space-y-3">
+        <button onclick="view='login';render()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
+          🛍️ Masuk Sebagai Pembeli
+        </button>
+        <button onclick="view='loginAdmin';render()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
+          🔒 Masuk Sebagai Admin
+        </button>
+      </div>
+
+      <div class="mt-6 border-t pt-4">
+        <p class="text-xs text-zinc-500">Belum punya akun pembeli?</p>
+        <button onclick="view='register';render()" class="text-[#a48bc1] hover:underline font-bold text-xs mt-1">Daftar Akun Baru</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function login() {
+  return `
+  <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+    <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+      <h2 class="serif text-3xl text-center">Masuk Akun</h2>
+      <p class="text-[10px] text-zinc-400 text-center mb-6 tracking-widest uppercase">PEMBELI • ${siteSettings.storeName}</p>
+      
+      <input id="le" type="text" placeholder="Email atau No. WhatsApp" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
+      <input id="lp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-[#cbb6e2]">
+      
+      <button onclick="doLogin()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
+        Masuk ke Aplikasi
+      </button>
+      
+      <p class="text-center text-xs text-zinc-500 mt-5">Belum punya akun? <button onclick="view='register';render()" class="text-[#a48bc1] font-bold hover:underline">Daftar</button></p>
+      <button onclick="view='gate';render()" class="w-full mt-4 text-xs text-zinc-400 text-center block hover:text-zinc-600">← Kembali ke Pilihan Akses</button>
+    </div>
+  </div>`;
+}
+
+function register() {
+  return `
+  <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+    <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+      <h2 class="serif text-3xl text-center mb-1">Buat Akun</h2>
+      <p class="text-[10px] text-zinc-400 text-center mb-6 tracking-widest uppercase">Pendaftaran Pembeli • ${siteSettings.storeName}</p>
+      
+      <input id="rn" placeholder="Nama Lengkap" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
+      <input id="re" type="email" placeholder="Email" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
+      <input id="rw" type="tel" placeholder="Nomor WhatsApp Aktif (cth: 08123456789)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
+      <textarea id="ra" placeholder="Alamat Lengkap" rows="2" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]"></textarea>
+      <input id="rp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
+      <input id="rpc" type="password" placeholder="Konfirmasi Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-[#cbb6e2]">
+      
+      <button onclick="doReg()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">Daftar</button>
+      <button onclick="view='login';render()" class="w-full mt-4 text-xs text-zinc-500 text-center block hover:text-zinc-700">← Kembali ke Login Pembeli</button>
+    </div>
+  </div>`;
+}
+
+function loginAdmin() {
+  return `
+  <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+    <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+      <h2 class="serif text-2xl text-center">Login Admin</h2>
+      <p class="text-xs text-zinc-400 text-center mb-4">Akses khusus pengelola toko</p>
+      
+      <input id="ae" type="email" placeholder="Email Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-3 text-sm bg-[#faf6f3]">
+      <input id="ap" type="password" placeholder="Password Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-4 text-sm bg-[#faf6f3]">
+      
+      <button onclick="doLoginAdmin()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full text-sm font-medium shadow-md active:scale-98 transition-all">
+        Masuk Dashboard Admin
+      </button>
+      
+      <button onclick="view='gate';render()" class="w-full mt-4 text-xs text-zinc-400 text-center block hover:text-zinc-600">← Kembali ke Pilihan Akses</button>
+    </div>
+  </div>`;
+}
+
+function doReg() {
+  const n = document.getElementById('rn').value.trim();
+  const e = document.getElementById('re').value.trim();
+  const w = document.getElementById('rw').value.trim();
+  const a = document.getElementById('ra').value.trim();
+  const p = document.getElementById('rp').value;
+  const pc = document.getElementById('rpc').value;
+
+  if (!n || !e || !w || !a || !p || !pc) return showToast('Lengkapi semua bidang!');
+  if (p !== pc) return showToast('Konfirmasi password tidak cocok!');
+  if (buyers.find(b => b.email === e)) return showToast('Email sudah terdaftar!');
+  
+  const cleanWa = w.replace(/[^0-9]/g, '');
+  if (buyers.find(b => b.phone === cleanWa || b.phone === w)) return showToast('Nomor WhatsApp sudah terdaftar!');
+
+  buyers.push({ name: n, email: e, phone: cleanWa, address: a, pass: p, registeredAt: new Date().toISOString() });
+  save();
+
+  const waMsg = encodeURIComponent("Terimakasih sudah mendaftar silahkan lanjut belanja!");
+  window.open(`https://wa.me/${WA_NUMBER}?text=${waMsg}`, '_blank');
+
+  showToast('Pendaftaran berhasil, silakan login!');
+  view = 'login';
+  render();
+}
+
+function doLogin() {
+  const input = document.getElementById('le').value.trim();
+  const p = document.getElementById('lp').value;
+  const cleanInput = input.replace(/[^0-9]/g, '');
+
+  const f = buyers.find(b => (b.email === input || (b.phone && b.phone === cleanInput)) && b.pass === p);
+  if (!f) return showToast('Email/WA atau password salah!');
+  
+  currentBuyer = f;
+  sessionStorage.setItem('ssr_cb', JSON.stringify(f));
+  view = 'shop';
+  render();
+  showToast('Selamat datang, ' + f.name);
+}
+
+function doLoginAdmin() {
+  const e = document.getElementById('ae').value;
+  const p = document.getElementById('ap').value;
+  if (e === adminAccount.email && p === adminAccount.pass) {
+    sessionStorage.setItem('ssr_ad', '1');
+    isAdmin = true;
+    view = 'admin';
+    render();
+    showToast('Login Admin Berhasil');
+  } else {
+    showToast('Kredensial Admin Salah!');
+  }
+}
+
+function saveAdminSettings() {
+  const newWa = document.getElementById('adm_wa').value.trim();
+  const newEmail = document.getElementById('adm_email').value.trim();
+  const newPass = document.getElementById('adm_pass').value;
+  const confirmPass = document.getElementById('adm_confirm_pass').value;
+
+  if (!newWa || !newEmail || !newPass || !confirmPass) {
+    return showToast('Semua bidang harus diisi!');
+  }
+
+  if (newPass !== confirmPass) {
+    return showToast('Konfirmasi password tidak cocok!');
+  }
+
+  adminAccount.phone = newWa.replace(/[^0-9]/g, '');
+  adminAccount.email = newEmail;
+  adminAccount.pass = newPass;
+
+  WA_NUMBER = adminAccount.phone;
+
+  save();
+  showToast('Pengaturan Admin Berhasil Diperbarui!');
+  render();
+}
+
+function logoutUser() {
+  sessionStorage.removeItem('ssr_cb');
+  sessionStorage.removeItem('ssr_ad');
+  currentBuyer = null;
+  isAdmin = false;
+  closeSettingsModal();
+  view = 'gate';
+  render();
+  showToast('Berhasil keluar');
+}
+
+function openSettingsModal() {
+  if (currentBuyer) {
+    document.getElementById('buyerEmailInput').value = currentBuyer.email || '';
+    document.getElementById('buyerPhoneInput').value = currentBuyer.phone || '';
+  }
+  document.getElementById('currentPass').value = '';
+  document.getElementById('newPass').value = '';
+  document.getElementById('confirmNewPass').value = '';
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function updateBuyerSettings() {
+  if (!currentBuyer) return;
+  const newEmail = document.getElementById('buyerEmailInput').value.trim();
+  const newPhone = document.getElementById('buyerPhoneInput').value.trim();
+  const oldP = document.getElementById('currentPass').value;
+  const newP = document.getElementById('newPass').value;
+  const confirmP = document.getElementById('confirmNewPass').value;
+
+  if (!newEmail || !newPhone) return showToast('Email dan Nomor WhatsApp harus diisi!');
+
+  const cleanPhone = newPhone.replace(/[^0-9]/g, '');
+  const existingEmail = buyers.find(b => b.email === newEmail && b.email !== currentBuyer.email);
+  if (existingEmail) return showToast('Email sudah digunakan oleh akun lain!');
+
+  const existingPhone = buyers.find(b => b.phone === cleanPhone && b.email !== currentBuyer.email);
+  if (existingPhone) return showToast('Nomor WhatsApp sudah digunakan oleh akun lain!');
+
+  let passUpdated = false;
+  if (oldP || newP || confirmP) {
+    if (!oldP) return showToast('Masukkan password lama Anda!');
+    if (currentBuyer.pass !== oldP) return showToast('Password lama Anda salah!');
+    if (!newP) return showToast('Masukkan password baru!');
+    if (newP !== confirmP) return showToast('Konfirmasi password baru tidak cocok!');
+    passUpdated = true;
+  }
+
+  const idx = buyers.findIndex(b => b.email === currentBuyer.email);
+  
+  if (chatMessages && chatMessages.length > 0) {
+    chatMessages.forEach(c => {
+      if (c.buyerEmail === currentBuyer.email) c.buyerEmail = newEmail;
+    });
+  }
+  if (orders && orders.length > 0) {
+    orders.forEach(o => {
+      if (o.buyerEmail === currentBuyer.email) {
+        o.buyerEmail = newEmail;
+        o.buyerPhone = cleanPhone;
+      }
+    });
+  }
+
+  currentBuyer.email = newEmail;
+  currentBuyer.phone = cleanPhone;
+  if (passUpdated) currentBuyer.pass = newP;
+
+  if (idx > -1) {
+    buyers[idx].email = newEmail;
+    buyers[idx].phone = cleanPhone;
+    if (passUpdated) buyers[idx].pass = newP;
+  }
+
+  sessionStorage.setItem('ssr_cb', JSON.stringify(currentBuyer));
+  save();
+  closeSettingsModal();
+  render();
+  showToast('Pengaturan akun berhasil diperbarui!');
+}
+
+function changePassword() {
+  updateBuyerSettings();
+}
+
+function renderNav() {
+  if (isAdmin) {
+    return '';
+  }
+
+  return `
+  <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 max-w-[460px] w-[92%] bg-white/90 backdrop-blur-md rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex justify-around items-center py-3 px-3 z-20 border border-zinc-100">
+    <button onclick="view='shop';render()" class="flex flex-col items-center ${view==='shop'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}">
+      <span class="text-lg leading-none">🏠</span>
+      <span class="text-[10px] mt-0.5">Toko</span>
+    </button>
+
+    <button onclick="view='chat';render()" class="flex flex-col items-center ${view==='chat'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}">
+      <span class="text-lg leading-none">💬</span>
+      <span class="text-[10px] mt-0.5">Chat</span>
+    </button>
+    
+    <button onclick="openCart()" class="relative bg-black text-white w-11 h-11 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+      <span class="text-base">👜</span>
+      <span class="absolute -top-1 -right-1 bg-[#cbb6e2] text-white text-[10px] w-5 h-5 grid place-items-center rounded-full font-bold shadow-sm">
+        ${cart.reduce((a,b)=>a+b.qty,0)}
+      </span>
+    </button>
+
+    <button onclick="view='history';render()" class="flex flex-col items-center relative ${view==='history'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}">
+      <span class="text-lg leading-none">📋</span>
+      <span class="text-[10px] mt-0.5">Pesanan</span>
+    </button>
+
+    <button onclick="openSettingsModal()" class="flex flex-col items-center text-zinc-400 hover:text-zinc-600">
+      <span class="text-lg leading-none">⚙️</span>
+      <span class="text-[10px] mt-0.5">Pengaturan</span>
+    </button>
+  </nav>`;
+}
+
+// --- VIEW: SHOP ---
+function shop() {
+  const allProds = getAllProducts();
+  const categoriesList = Array.from(new Set(['Shoes', 'Bags', 'Apparel', 'Accessories', ...allProds.map(p => p.cat).filter(Boolean)]));
+
+  let list = allProds.filter(p => {
+    const matchCat = (filterCat === 'All') || (p.cat === filterCat);
+    const q = buyerSearchQuery.toLowerCase().trim();
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.cat && p.cat.toLowerCase().includes(q));
+    return matchCat && matchSearch;
+  });
+
+  const totalItemQty = cart.reduce((sum, item) => sum + item.qty, 0);
+  const subtotal = cart.reduce((sum, item) => {
+    const p = allProds.find(x => x.id === item.id);
+    return sum + (p ? p.price * item.qty : 0);
+  }, 0);
+
+  const isDelivery = deliverySettings.selectedMethod === deliverySettings.deliveryLabel;
+  const rawShippingFee = isDelivery ? (deliverySettings.deliveryFee || 0) : 0;
+  
+  const isDiscountEligible = isDelivery && (totalItemQty >= (deliverySettings.minQtyForDiscount || 1));
+  const shippingDiscount = isDiscountEligible ? Math.min(rawShippingFee, (deliverySettings.discountAmount || 0)) : 0;
+  const finalShippingFee = Math.max(0, rawShippingFee - shippingDiscount);
+  const totalPayment = subtotal + finalShippingFee;
+
+  return `
+  <header class="w-full bg-[#faf6f3]/90 backdrop-blur sticky top-0 z-10 border-b border-zinc-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+      <div>
+        <h1 class="serif text-[26px] sm:text-3xl tracking-[0.18em] leading-none">${siteSettings.storeName}</h1>
+      </div>
+      <div class="text-right">
+        <p class="text-[10px] sm:text-xs text-zinc-400">Pengguna:</p>
+        <p class="text-xs sm:text-sm font-semibold max-w-[150px] truncate">${currentBuyer ? currentBuyer.name : 'Tamu'}</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+    <div class="mt-4 sm:mt-6 rounded-[2rem] overflow-hidden relative h-56 sm:h-80 md:h-[380px] shadow-sm">
+      <img src="${siteSettings.bannerImage}" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+      <div class="absolute bottom-6 left-6 right-6 sm:bottom-10 sm:left-10 text-white">
+        <p class="serif text-3xl sm:text-5xl leading-none">${siteSettings.bannerTitle1}</p>
+        <p class="serif text-3xl sm:text-5xl leading-none mt-1">${siteSettings.bannerTitle2}</p>
+        <p class="text-xs sm:text-base opacity-80 mt-2">${siteSettings.bannerDesc}</p>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-[1.8rem] p-4 sm:p-8 shadow-sm">
+      <div class="mb-5 max-w-xl">
+        <div class="relative">
+          <input id="buyerSearchInput" type="text" value="${buyerSearchQuery}" oninput="buyerSearchQuery=this.value;render();focusBuyerSearch()" placeholder="Cari nama produk / kategori..." class="w-full bg-[#faf6f3] border border-zinc-200 px-4 py-3 rounded-full text-xs sm:text-sm font-medium outline-none focus:border-[#cbb6e2] transition-colors">
+          ${buyerSearchQuery ? `<button onclick="buyerSearchQuery='';render()" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
+        </div>
+      </div>
+
+      <p class="font-semibold text-sm sm:text-base mb-3">Kategori Produk</p>
+      <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <button onclick="filterCat='All';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat==='All' ? 'bg-[#cbb6e2] text-white font-medium shadow-sm' : 'bg-[#faf6f3] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">All</button>
+        ${categoriesList.map(c => `
+          <button onclick="filterCat='${c}';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat===c ? 'bg-[#cbb6e2] text-white font-medium shadow-sm' : 'bg-[#faf6f3] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">${c}</button>
+        `).join('')}
+      </div>
+
+      <p class="font-semibold text-sm sm:text-base mt-6 mb-4">Katalog Pilihan ${buyerSearchQuery ? `<span class="text-xs font-normal text-zinc-500">(Hasil cari: "${buyerSearchQuery}")</span>` : ''}</p>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+        ${list.length > 0 ? list.map(p => {
+          const hasDetail = p.hasVariations && p.colors && p.colors.length > 0;
+          let calculatedStock = p.stock;
+          if (hasDetail) {
+            calculatedStock = p.colors.reduce((total, c) => total + c.sizes.reduce((sSum, sz) => sSum + (Number(sz.stock)||0), 0), 0);
+          }
+
+          return `
+          <div class="bg-[#faf6f3] rounded-[1.3rem] p-3 sm:p-4 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div>
+              <div class="relative cursor-pointer group overflow-hidden rounded-xl" onclick="handleProductClick(${p.id})">
+                <img src="${p.image}" class="w-full h-36 sm:h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105">
+                <span class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold shadow-sm">
+                  Rp ${(p.price/1000).toFixed(0)}k
+                </span>
+                ${hasDetail ? `<span class="absolute bottom-2 left-2 bg-black/70 text-white text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-medium">✨ Multi Warna/Ukuran</span>` : ''}
+              </div>
+              <p onclick="handleProductClick(${p.id})" class="text-[13px] sm:text-sm mt-3 font-semibold leading-tight line-clamp-1 cursor-pointer hover:text-[#a48bc1] transition-colors">${p.name}</p>
+              <p class="text-[11px] sm:text-xs text-zinc-500 mt-1">${p.cat} • ${calculatedStock === 0 ? '<span class="text-red-500 font-semibold">Stok Habis</span>' : calculatedStock + ' stok'}</p>
+            </div>
+            <button ${calculatedStock === 0 ? 'disabled' : ''} onclick="handleProductClick(${p.id})" class="w-full mt-3 ${calculatedStock === 0 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' : 'bg-[#cbb6e2] hover:bg-[#b79ed1] text-white active:scale-95'} py-2.5 rounded-full text-[12px] sm:text-xs font-medium transition-all shadow-sm">
+              ${calculatedStock === 0 ? 'Habis' : (hasDetail ? 'Pilih Warna & Ukuran' : '+ Keranjang')}
+            </button>
+          </div>
+        `}).join('') : `
+          <div class="col-span-full py-12 text-center">
+            <p class="text-3xl mb-2">🔍</p>
+            <p class="text-sm font-semibold text-zinc-500">Produk tidak ditemukan</p>
+            <p class="text-xs text-zinc-400 mt-1">Coba gunakan kata kunci pencarian atau kategori lain.</p>
+          </div>
+        `}
+      </div>
+    </div>
+  </main>
+
+  ${renderNav()}
+
+  <!-- MODAL KERANJANG BELANJA -->
+  <div id="cart" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30 p-4 flex items-end sm:items-center justify-center transition-opacity">
+    <div class="bg-white w-full max-w-lg rounded-t-[2rem] sm:rounded-3xl p-6 max-h-[85vh] overflow-auto flex flex-col justify-between shadow-2xl">
+      <div>
+        <div class="flex justify-between items-center border-b pb-4">
+          <h3 class="serif text-2xl">Keranjang Belanja</h3>
+          <button onclick="document.getElementById('cart').classList.add('hidden')" class="w-8 h-8 bg-zinc-100 hover:bg-zinc-200 rounded-full flex items-center justify-center font-bold">✕</button>
+        </div>
+        
+        <div class="mt-4 space-y-3">
+          ${cart.map((c, index) => {
+            const p = getAllProducts().find(x => x.id === c.id);
+            if (!p) return '';
+            
+            const catConfig = categorySizes[p.cat];
+            const needSize = (!p.hasVariations) && catConfig && catConfig.hasSize && catConfig.sizes && catConfig.sizes.length > 0;
+            const displayImg = c.selectedColorImg || p.image;
+
+            return `
+            <div class="flex gap-3 bg-[#faf6f3] p-3 rounded-2xl items-center">
+              <img src="${displayImg}" class="w-16 h-16 rounded-xl object-cover border border-zinc-200">
+              <div class="flex-1">
+                <p class="font-medium text-[13px] sm:text-sm leading-tight">${p.name}</p>
+                ${c.selectedColor ? `<p class="text-[11px] text-purple-700 font-semibold mt-0.5">Warna: ${c.selectedColor}</p>` : ''}
+                ${c.selectedSize ? `<p class="text-[11px] text-zinc-600 font-medium">Ukuran: ${c.selectedSize}</p>` : ''}
+                <p class="text-xs text-zinc-500 mt-0.5">Rp ${p.price.toLocaleString('id-ID')}</p>
+                
+                ${needSize ? `
+                  <div class="mt-2">
+                    <label class="text-[10px] font-semibold text-zinc-600 block mb-1">Pilih Ukuran (${p.cat}):</label>
+                    <select onchange="updateCartSize(${index}, this.value)" class="w-full text-xs p-1.5 rounded-lg border border-zinc-200 bg-white font-medium">
+                      <option value="">-- Pilih Ukuran --</option>
+                      ${catConfig.sizes.map(sz => `<option value="${sz}" ${c.selectedSize === sz ? 'selected' : ''}>Ukuran ${sz}</option>`).join('')}
+                    </select>
+                  </div>
+                ` : ''}
+
+                <div class="flex gap-2 mt-2 items-center">
+                  <button onclick="qty(${index},-1)" class="w-6 h-6 bg-white rounded-full border border-zinc-200 flex items-center justify-center text-xs font-bold hover:bg-zinc-100">-</button>
+                  <span class="text-xs font-semibold w-4 text-center">${c.qty}</span>
+                  <button onclick="qty(${index},1)" class="w-6 h-6 bg-[#cbb6e2] hover:bg-[#b79ed1] text-white rounded-full flex items-center justify-center text-xs font-bold">+</button>
+                </div>
+              </div>
+            </div>`;
+          }).join('') || '<p class="text-sm text-center text-zinc-400 py-8">Keranjang Anda masih kosong.</p>'}
+        </div>
+
+        ${cart.length > 0 ? `
+          <div class="mt-6 bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200">
+            <p class="font-semibold text-xs text-zinc-800 mb-2">📦 Pilih Opsi Penyerahan Barang:</p>
+            <div class="space-y-2 text-xs">
+              <label class="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer">
+                <div class="flex items-center gap-2">
+                  <input type="radio" name="deliveryOption" value="${deliverySettings.deliveryLabel}" ${deliverySettings.selectedMethod === deliverySettings.deliveryLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-[#cbb6e2]">
+                  <span class="font-medium text-zinc-700">${deliverySettings.deliveryLabel}</span>
+                </div>
+                <span class="text-zinc-500 font-semibold">+Rp ${(deliverySettings.deliveryFee || 0).toLocaleString('id-ID')}</span>
+              </label>
+
+              <label class="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer">
+                <div class="flex items-center gap-2">
+                  <input type="radio" name="deliveryOption" value="${deliverySettings.pickupLabel}" ${deliverySettings.selectedMethod === deliverySettings.pickupLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-[#cbb6e2]">
+                  <span class="font-medium text-zinc-700">${deliverySettings.pickupLabel}</span>
+                </div>
+                <span class="text-green-600 font-semibold">Gratis (Rp 0)</span>
+              </label>
+            </div>
+          </div>
+        ` : ''}
+
+        ${cart.length > 0 && isDelivery ? `
+          <div class="mt-3 p-3.5 rounded-2xl text-xs ${isDiscountEligible ? 'bg-purple-100 border border-purple-200 text-purple-900' : 'bg-amber-50 border border-amber-200 text-amber-900'} flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-base">${isDiscountEligible ? '🎉' : '💡'}</span>
+              <div>
+                ${isDiscountEligible ? `
+                  <p class="font-bold">Potongan Ongkir Aktif!</p>
+                  <p class="text-[11px] opacity-90">Anda hemat <b>Rp ${shippingDiscount.toLocaleString('id-ID')}</b> karena membeli ${totalItemQty} barang.</p>
+                ` : `
+                  <p class="font-bold">Promo Potongan Ongkir!</p>
+                  <p class="text-[11px] opacity-90">Beli minimal <b>${deliverySettings.minQtyForDiscount} barang</b> untuk dapat potongan ongkir Rp ${(deliverySettings.discountAmount || 0).toLocaleString('id-ID')}. (Saat ini: ${totalItemQty} item)</p>
+                `}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="mt-6 border-t pt-4">
+        ${cart.length > 0 ? `
+          <div class="bg-[#f3ebf7] p-4 rounded-2xl text-xs space-y-2">
+            <div class="flex justify-between text-zinc-600">
+              <span>Subtotal Produk (${totalItemQty} item)</span>
+              <span class="font-semibold text-zinc-800">Rp ${subtotal.toLocaleString('id-ID')}</span>
+            </div>
+            
+            <div class="flex justify-between text-zinc-600">
+              <span>Biaya Pengiriman Standar</span>
+              <span class="font-semibold text-zinc-800">
+                ${isDelivery ? 'Rp ' + rawShippingFee.toLocaleString('id-ID') : 'Rp 0'}
+              </span>
+            </div>
+
+            ${isDiscountEligible ? `
+              <div class="flex justify-between text-purple-700 font-semibold border-b pb-2">
+                <span>Potongan Biaya Ongkir</span>
+                <span>- Rp ${shippingDiscount.toLocaleString('id-ID')}</span>
+              </div>
+            ` : '<div class="border-b pb-1"></div>'}
+
+            <div class="flex justify-between text-sm font-bold text-zinc-900 pt-1">
+              <span>Total Pembayaran</span>
+              <span class="text-[#8857b5]">Rp ${totalPayment.toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+
+          <button onclick="checkout()" class="w-full mt-4 bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-semibold shadow-md active:scale-98 transition-all">
+            Checkout via WhatsApp
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// LOGIKA HANDLING DETAIL PRODUK & VARIATION PEMBELI
+function handleProductClick(id) {
+  const p = getAllProducts().find(x => x.id === id);
+  if (!p) return;
+
+  if (p.hasVariations && p.colors && p.colors.length > 0) {
+    activeDetailProduct = p;
+    selectedDetailColorIndex = 0;
+    selectedDetailSize = '';
+    openProductDetailModal();
+  } else {
+    addDirectToCart(p.id);
+  }
+}
+
+function openProductDetailModal() {
+  renderProductDetailContent();
+  document.getElementById('productDetailModal').classList.remove('hidden');
+}
+
+function closeProductDetailModal() {
+  document.getElementById('productDetailModal').classList.add('hidden');
+  activeDetailProduct = null;
+}
+
+function renderProductDetailContent() {
+  if (!activeDetailProduct) return;
+  const p = activeDetailProduct;
+  const currentColor = p.colors[selectedDetailColorIndex];
+  const displayImage = currentColor ? currentColor.image : p.image;
+
+  let currentStock = p.stock;
+  if (currentColor && selectedDetailSize) {
+    const szObj = currentColor.sizes.find(s => s.size === selectedDetailSize);
+    currentStock = szObj ? Number(szObj.stock) || 0 : 0;
+  } else if (currentColor) {
+    currentStock = currentColor.sizes.reduce((sum, s) => sum + (Number(s.stock)||0), 0);
+  }
+
+  const container = document.getElementById('productDetailContent');
+  container.innerHTML = `
+    <div class="text-center">
+      <img id="detailMainImg" src="${displayImage}" class="w-full h-64 object-cover rounded-2xl shadow-sm border border-zinc-200 mb-4">
+      <h3 class="serif text-2xl font-bold text-zinc-900 leading-tight">${p.name}</h3>
+      <p class="text-xs text-zinc-500 font-semibold mt-1">${p.cat} • <span class="text-[#8857b5] font-bold text-sm">Rp ${p.price.toLocaleString('id-ID')}</span></p>
+    </div>
+
+    <div class="mt-5">
+      <label class="text-xs font-bold text-zinc-800 block mb-2">1. Pilih Warna Produk:</label>
+      <div class="grid grid-cols-2 gap-2">
+        ${p.colors.map((c, idx) => `
+          <button onclick="selectDetailColor(${idx})" class="p-2.5 rounded-2xl border text-left flex items-center gap-2.5 transition-all ${selectedDetailColorIndex === idx ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-300' : 'border-zinc-200 bg-white hover:border-zinc-300'}">
+            <img src="${c.image}" class="w-10 h-10 rounded-xl object-cover border border-zinc-200">
+            <div>
+              <p class="text-xs font-bold text-zinc-900 leading-tight">${c.name}</p>
+              <p class="text-[10px] text-zinc-500">${c.sizes.reduce((s, sz)=>s+(Number(sz.stock)||0),0)} stok</p>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    ${currentColor ? `
+      <div class="mt-5">
+        <label class="text-xs font-bold text-zinc-800 block mb-2">2. Pilih Ukuran ${currentColor.name}:</label>
+        <div class="flex flex-wrap gap-2">
+          ${currentColor.sizes.map(sz => {
+            const isOutOfStock = (Number(sz.stock)||0) <= 0;
+            return `
+            <button ${isOutOfStock ? 'disabled' : ''} onclick="selectDetailSize('${sz.size}')" class="px-4 py-2 rounded-xl text-xs font-bold border transition-all ${selectedDetailSize === sz.size ? 'bg-black text-white border-black shadow-md' : (isOutOfStock ? 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed line-through' : 'bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400')}">
+              Ukuran ${sz.size} ${isOutOfStock ? '(Habis)' : `(${sz.stock})`}
+            </button>
+          `}).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <div class="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between gap-3">
+      <div>
+        <span class="text-[10px] text-zinc-400 block font-semibold">Sisa Stok Pilihan:</span>
+        <span class="text-xs font-bold ${currentStock > 0 ? 'text-emerald-600' : 'text-red-500'}">${currentStock > 0 ? currentStock + ' Pcs' : 'Stok Kosong'}</span>
+      </div>
+
+      <button onclick="confirmAddToCartFromDetail()" class="flex-1 bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-bold text-xs shadow-md active:scale-95 transition-all">
+        🛒 Tambahkan ke Keranjang
+      </button>
+    </div>
+  `;
+}
+
+function selectDetailColor(index) {
+  selectedDetailColorIndex = index;
+  selectedDetailSize = '';
+  renderProductDetailContent();
+}
+
+function selectDetailSize(size) {
+  selectedDetailSize = size;
+  renderProductDetailContent();
+}
+
+function confirmAddToCartFromDetail() {
+  if (!activeDetailProduct) return;
+  const p = activeDetailProduct;
+  const currentColor = p.colors[selectedDetailColorIndex];
+
+  if (!currentColor) return showToast('Pilih warna produk terlebih dahulu!');
+  if (!selectedDetailSize) return showToast('Wajib memilih ukuran produk terlebih dahulu!');
+
+  const szObj = currentColor.sizes.find(s => s.size === selectedDetailSize);
+  const sizeStock = szObj ? Number(szObj.stock) || 0 : 0;
+
+  if (sizeStock <= 0) return showToast('Stok untuk ukuran ini sedang habis!');
+
+  const existingIndex = cart.findIndex(c => c.id === p.id && c.selectedColor === currentColor.name && c.selectedSize === selectedDetailSize);
+
+  if (existingIndex > -1) {
+    if (cart[existingIndex].qty + 1 > sizeStock) return showToast('Stok tidak mencukupi! Maksimal: ' + sizeStock);
+    cart[existingIndex].qty++;
+  } else {
+    cart.push({
+      id: p.id,
+      qty: 1,
+      selectedColor: currentColor.name,
+      selectedColorImg: currentColor.image,
+      selectedSize: selectedDetailSize
+    });
+  }
+
+  save();
+  closeProductDetailModal();
+  render();
+  showToast('Barang berhasil disimpan ke keranjang!');
+}
+
+function addDirectToCart(id) {
+  const p = getAllProducts().find(x => x.id === id);
+  if (!p) return;
+
+  const existingIndex = cart.findIndex(c => c.id === id && !c.selectedColor && !c.selectedSize);
+  const currentCartQty = existingIndex > -1 ? cart[existingIndex].qty : 0;
+
+  if (currentCartQty + 1 > p.stock) return showToast('Stok tidak mencukupi! Sisa: ' + p.stock);
+
+  if (existingIndex > -1) {
+    cart[existingIndex].qty++;
+  } else {
+    cart.push({ id: id, qty: 1, selectedColor: '', selectedColorImg: '', selectedSize: '' });
+  }
+
+  save();
+  render();
+  showToast('Ditambahkan ke keranjang');
+}
+
+function focusBuyerSearch() {
+  const el = document.getElementById('buyerSearchInput');
+  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
+function setDeliveryMethod(val) {
+  deliverySettings.selectedMethod = val;
+  save();
+  render();
+  document.getElementById('cart').classList.remove('hidden');
+}
+
+function updateCartSize(index, size) {
+  if (cart[index]) {
+    cart[index].selectedSize = size;
+    save();
+  }
+}
+
+function qty(index, delta) {
+  if (!cart[index]) return;
+  const item = cart[index];
+  const p = getAllProducts().find(x => x.id === item.id);
+  
+  let availableStock = p ? p.stock : 0;
+  if (p && p.hasVariations && item.selectedColor && item.selectedSize) {
+    const cObj = p.colors.find(c => c.name === item.selectedColor);
+    if (cObj) {
+      const sObj = cObj.sizes.find(s => s.size === item.selectedSize);
+      if (sObj) availableStock = Number(sObj.stock) || 0;
+    }
+  }
+
+  if (delta > 0 && item.qty + 1 > availableStock) return showToast('Stok maksimum tercapai');
+  
+  item.qty += delta;
+  if (item.qty <= 0) cart.splice(index, 1);
+
+  save();
+  render();
+  document.getElementById('cart').classList.remove('hidden');
+}
+
+function openCart() {
+  render();
+  setTimeout(() => document.getElementById('cart').classList.remove('hidden'), 50);
+}
+
+function checkout() {
+  if (!currentBuyer) return showToast('Silakan login terlebih dahulu');
+  if (cart.length === 0) return showToast('Keranjang Anda kosong!');
+
+  if (!deliverySettings.selectedMethod) {
+    return showToast('Mohon pilih opsi Barang Diantarkan atau Diambil di Toko!');
+  }
+
+  let subtotal = 0;
+  let totalItemQty = 0;
+  let txt = [];
+  let orderItemsDetails = []; 
+  
+  for (let c of cart) {
+    const p = products.find(x => x.id === c.id) || thirdPartyProducts.find(x => x.id === c.id);
+    if (p) {
+      if (p.hasVariations && c.selectedColor && c.selectedSize) {
+        const cObj = p.colors ? p.colors.find(col => col.name === c.selectedColor) : null;
+        if (cObj) {
+          const sObj = cObj.sizes ? cObj.sizes.find(sz => sz.size === c.selectedSize) : null;
+          if (sObj) {
+            const currentStock = Number(sObj.stock) || 0;
+            if (currentStock < c.qty) return showToast(`Stok ${p.name} (${c.selectedColor} - ${c.selectedSize}) kurang! Sisa: ${currentStock}`);
+            sObj.stock = currentStock - c.qty;
+          }
+        }
+      } else {
+        if (p.stock < c.qty) return showToast(`Stok ${p.name} tidak mencukupi! Sisa: ${p.stock}`);
+        p.stock -= c.qty;
+      }
+
+      subtotal += p.price * c.qty;
+      totalItemQty += c.qty;
+      
+      const varText = [];
+      if (c.selectedColor) varText.push(`Warna: ${c.selectedColor}`);
+      if (c.selectedSize) varText.push(`Ukuran: ${c.selectedSize}`);
+      const formatVar = varText.length > 0 ? ` [${varText.join(', ')}]` : '';
+
+      txt.push(`${p.name}${formatVar} (${c.qty}x)`);
+
+      orderItemsDetails.push({
+        id: p.id,
+        name: p.name,
+        qty: c.qty,
+        price: p.price,
+        costPrice: p.costPrice || p.price,
+        color: c.selectedColor || '',
+        size: c.selectedSize || '',
+        isThirdParty: !!p.isThirdParty,
+        storeName: p.storeName || '',
+        storeAddress: p.storeAddress || '',
+        storePhone: p.storePhone || ''
+      });
+    }
+  }
+
+  const isDelivery = deliverySettings.selectedMethod === deliverySettings.deliveryLabel;
+  const rawShippingFee = isDelivery ? (deliverySettings.deliveryFee || 0) : 0;
+  
+  const isDiscountEligible = isDelivery && (totalItemQty >= (deliverySettings.minQtyForDiscount || 1));
+  const shippingDiscount = isDiscountEligible ? Math.min(rawShippingFee, (deliverySettings.discountAmount || 0)) : 0;
+  const finalShippingFee = Math.max(0, rawShippingFee - shippingDiscount);
+  const grandTotal = subtotal + finalShippingFee;
+
+  const orderData = {
+    id: Date.now(),
+    text: txt.join(', '),
+    items: orderItemsDetails, 
+    deliveryMethod: deliverySettings.selectedMethod,
+    subtotal: subtotal,
+    rawShippingFee: rawShippingFee,
+    shippingDiscount: shippingDiscount,
+    shippingFee: finalShippingFee,
+    total: grandTotal,
+    buyerEmail: currentBuyer.email,
+    buyerName: currentBuyer.name,
+    buyerPhone: currentBuyer.phone || '-',
+    buyerAddress: currentBuyer.address || '-',
+    date: new Date().toLocaleString('id-ID'),
+    status: 'Diproses',
+    courier: null
+  };
+
+  orders.unshift(orderData);
+  cart = [];
+  const selectedDelivery = deliverySettings.selectedMethod;
+  deliverySettings.selectedMethod = "";
+  
+  save(); 
+
+  const waText = `Halo Admin ${siteSettings.storeName},\n\nSaya *${currentBuyer.name}*\n📱 No. WA: ${currentBuyer.phone || '-'}\n📍 Alamat Lengkap: ${currentBuyer.address || '-'}\n\nIngin memesan:\n-------------------------------------\n- ${txt.join('\n- ')}\n-------------------------------------\n📌 *Opsi Penyerahan:* ${selectedDelivery}\n💵 *Subtotal Barang:* Rp ${subtotal.toLocaleString('id-ID')}\n🚚 *Biaya Pengiriman Normal:* Rp ${rawShippingFee.toLocaleString('id-ID')}\n🎁 *Potongan Ongkir:* ${shippingDiscount > 0 ? '-Rp ' + shippingDiscount.toLocaleString('id-ID') : 'Rp 0'}\n💰 *TOTAL PEMBAYARAN:* Rp ${grandTotal.toLocaleString('id-ID')}\n-------------------------------------\nMohon diproses, terima kasih!`;
+  
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waText)}`, '_blank');
+  
+  view = 'history';
+  render();
+  showToast('Pesanan berhasil dibuat & stok barang otomatis berkurang!');
+}
+
+function history() {
+  const myOrders = orders.filter(o => o.buyerEmail === currentBuyer?.email);
+  return `
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-32">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="serif text-2xl sm:text-3xl">Hai, ${currentBuyer ? currentBuyer.name : 'Pelanggan'} ✨</h2>
+        <p class="text-[10px] sm:text-xs text-zinc-400 tracking-widest uppercase mt-0.5">RIWAYAT BELANJA ANDA</p>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      ${myOrders.map(o => `
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-zinc-100">
+          <p class="text-[13px] sm:text-base font-semibold text-zinc-800">${o.text}</p>
+          <p class="text-xs sm:text-sm text-[#a48bc1] font-semibold mt-1.5">📍 Opsi: ${o.deliveryMethod || 'Diantarkan/Pickup'}</p>
+          
+          <div class="mt-2 bg-[#faf6f3] p-3 rounded-xl text-xs text-zinc-600 space-y-1">
+            <p>📱 <b>No. WA Pembeli:</b> ${o.buyerPhone || '-'}</p>
+            <p>📍 <b>Alamat Lengkap:</b> ${o.buyerAddress || '-'}</p>
+          </div>
+
+          <div class="text-xs text-zinc-500 mt-2 bg-[#faf6f3] p-3 rounded-xl space-y-1">
+            <div class="flex justify-between"><span>Subtotal Barang:</span><span>Rp ${(o.subtotal || o.total).toLocaleString('id-ID')}</span></div>
+            <div class="flex justify-between"><span>Biaya Ongkir Normal:</span><span>Rp ${(o.rawShippingFee ?? o.shippingFee ?? 0).toLocaleString('id-ID')}</span></div>
+            ${o.shippingDiscount > 0 ? `
+              <div class="flex justify-between text-purple-700 font-semibold"><span>Potongan Ongkir:</span><span>-Rp ${o.shippingDiscount.toLocaleString('id-ID')}</span></div>
+            ` : ''}
+            <div class="flex justify-between font-bold text-zinc-800 border-t pt-1"><span>Total Bayar:</span><span>Rp ${o.total.toLocaleString('id-ID')}</span></div>
+          </div>
+
+          <div class="mt-3 p-3 rounded-xl text-xs sm:text-sm font-medium border ${
+            o.status==='Sudah Di-packing' ? 'bg-blue-50 text-blue-900 border-blue-200' :
+            o.status==='Dalam Pengiriman' ? 'bg-purple-50 text-purple-900 border-purple-200' :
+            o.status==='Selesai' ? 'bg-emerald-50 text-emerald-900 border-emerald-200' :
+            o.status==='Dibatalkan' ? 'bg-red-50 text-red-900 border-red-200' :
+            'bg-amber-50 text-amber-900 border-amber-200'
+          }">
+            ${
+              o.status==='Sudah Di-packing' ? '📦 <b>Status Admin:</b> Pesanan Anda sudah di-packing dan bersiap diserahkan ke kurir/penyerahan.' :
+              o.status==='Dalam Pengiriman' ? '🚚 <b>Status Admin:</b> Barang dalam perjalanan pengiriman ke alamat Anda.' :
+              o.status==='Selesai' ? '✅ <b>Status:</b> Pesanan telah selesai dan dikonfirmasi diterima.' :
+              o.status==='Dibatalkan' ? '❌ <b>Status:</b> Pesanan ini dibatalkan.' :
+              '⏳ <b>Status:</b> Pesanan Anda sedang diproses oleh admin.'
+            }
+          </div>
+
+          ${o.courier ? `
+            <div class="mt-3 p-3 bg-purple-100/70 rounded-2xl border border-purple-200 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <img src="${o.courier.photo}" class="w-12 h-12 rounded-full object-cover border-2 border-purple-300 shadow-sm">
+                <div>
+                  <span class="text-[10px] font-bold text-purple-700 block uppercase tracking-wider">🛵 Kurir Pengantar</span>
+                  <p class="text-xs font-bold text-purple-950">${o.courier.name}</p>
+                  <p class="text-[11px] text-purple-800 font-medium">${o.courier.phone}</p>
+                </div>
+              </div>
+              <a href="https://wa.me/${o.courier.phone.replace(/[^0-9]/g, '')}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-[11px] font-bold shadow-sm flex items-center gap-1 whitespace-nowrap">
+                <span>💬 WhatsApp</span>
+              </a>
+            </div>
+          ` : ''}
+
+          ${(o.status === 'Dalam Pengiriman' || o.status === 'Sudah Di-packing') ? `
+            <button onclick="buyerConfirmOrder(${o.id})" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md active:scale-98 transition-all">
+              ✅ Konfirmasi Barang Sudah Diterima
+            </button>
+          ` : ''}
+
+          <div class="mt-3 flex justify-between items-center border-t pt-2">
+            <span class="text-[11px] sm:text-xs text-zinc-400">${o.date}</span>
+            <span class="text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full ${
+              o.status==='Selesai'?'bg-emerald-100 text-emerald-700':
+              o.status==='Sudah Di-packing'?'bg-blue-100 text-blue-700':
+              o.status==='Dalam Pengiriman'?'bg-purple-100 text-purple-700':
+              o.status==='Dibatalkan'?'bg-red-100 text-red-700':
+              'bg-amber-100 text-amber-700'
+            }">${o.status}</span>
+          </div>
+        </div>
+      `).join('') || '<p class="text-sm text-center text-zinc-400 py-10">Belum ada riwayat pesanan.</p>'}
+    </div>
+  </div>
+  ${renderNav()}`;
+}
+
+function buyerConfirmOrder(orderId) {
+  if (confirm('Konfirmasi bahwa barang pesanan sudah Anda terima dengan baik?')) {
+    const o = orders.find(x => x.id === orderId);
+    if (o) {
+      o.status = 'Selesai';
+      save();
+      render();
+      showToast('Terima kasih! Pesanan dikonfirmasi selesai.');
+    }
+  }
+}
+
+// --- VIEW: CHAT PEMBELI ---
+function chatBuyer() {
+  const buyerEmail = currentBuyer ? currentBuyer.email : '';
+  const myChats = chatMessages.filter(c => c.buyerEmail === buyerEmail);
+
+  return `
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-32">
+    <div class="flex items-center justify-between mb-4 border-b pb-3">
+      <div>
+        <h2 class="serif text-2xl font-bold text-zinc-900">💬 Pesan & Bantuan Admin</h2>
+        <p class="text-xs text-zinc-500">Hubungi customer service ${siteSettings.storeName}</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-3xl p-4 shadow-sm border border-zinc-100 h-[60vh] flex flex-col justify-between">
+      <div id="chatBoxBuyer" class="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar">
+        ${myChats.length > 0 ? myChats.map(m => `
+          <div class="flex flex-col ${m.sender === 'buyer' ? 'items-end' : 'items-start'}">
+            <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'buyer' ? 'bg-[#cbb6e2] text-white rounded-br-none' : 'bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
+              <p>${m.text}</p>
+              <span class="text-[9px] opacity-75 mt-1 block text-right">${m.time}</span>
+            </div>
+          </div>
+        `).join('') : `
+          <div class="h-full flex flex-col items-center justify-center text-zinc-400">
+            <span class="text-3xl mb-1">💬</span>
+            <p class="text-xs font-semibold">Belum ada pesan.</p>
+            <p class="text-[11px]">Kirim pesan untuk memulai obrolan dengan admin toko.</p>
+          </div>
+        `}
+      </div>
+
+      <div class="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
+        <input id="buyerChatInput" type="text" placeholder="Tulis pesan..." onkeypress="if(event.key==='Enter') sendBuyerChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
+        <button onclick="sendBuyerChat()" class="bg-black hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95">Kirim</button>
+      </div>
+    </div>
+  </div>
+  ${renderNav()}`;
+}
+
+function sendBuyerChat() {
+  const input = document.getElementById('buyerChatInput');
+  const txt = input ? input.value.trim() : '';
+  if (!txt || !currentBuyer) return;
+
+  chatMessages.push({
+    id: Date.now(),
+    buyerEmail: currentBuyer.email,
+    sender: 'buyer',
+    text: txt,
+    time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  });
+
+  save();
+  render();
+  setTimeout(() => {
+    const chatBox = document.getElementById('chatBoxBuyer');
+    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+  }, 100);
+}
+
+// --- VIEW: ADMIN DASHBOARD ---
+function admin() {
+  return `
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+    <header class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center text-xl font-bold shadow-md">⚡</div>
+        <div>
+          <h2 class="serif text-2xl font-bold text-zinc-900 leading-tight">Admin Dashboard</h2>
+          <p class="text-xs text-zinc-400 font-medium">Kelola toko <span class="text-black font-semibold">${siteSettings.storeName}</span> dengan mudah</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0">
+        <span class="bg-emerald-50 text-emerald-600 text-xs px-3 py-1.5 rounded-full font-semibold border border-emerald-100 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online
+        </span>
+      </div>
+    </header>
+
+    <!-- NAVIGATION TAB ADMIN -->
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
+      <button onclick="adminTab='thirdparty';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='thirdparty'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>🏪</span> Produk Toko Lain (${thirdPartyProducts.length})
+      </button>
+      <button onclick="adminTab='buyers';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='buyers'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>👥</span> Pembeli JishStore (${buyers.length})
+      </button>
+      <button onclick="adminTab='orders';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='orders'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>📋</span> Status Pesanan (${orders.length})
+      </button>
+      <button onclick="adminTab='delivery';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='delivery'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>🚚</span> Pengiriman & Kurir
+      </button>
+      <button onclick="adminTab='settings';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='settings'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>🎨</span> Tampilan Toko
+      </button>
+      <button onclick="adminTab='adminSettings';render()" class="px-5 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${adminTab==='adminSettings'?'bg-black text-white shadow-md':'bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50'}">
+        <span>⚙️</span> Pengaturan
+      </button>
+    </div>
+
+    <!-- TAB 2: MANAJEMEN BARANG TOKO LAIN -->
+    ${adminTab === 'thirdparty' ? `
+      <div class="space-y-6">
+        <div id="tpFormContainer" class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 scroll-mt-6">
+          <div class="flex justify-between items-center mb-5 pb-3 border-b border-zinc-100">
+            <div>
+              <h3 class="font-bold text-base text-zinc-900">${editTpId ? '✏️ Edit Barang Toko Lain' : '🏪 Tambah Barang Toko Lain'}</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">Atur harga beli dari penjual, harga jual, serta variasi pilihan warna dan ukuran.</p>
+            </div>
+            ${editTpId ? `<span class="bg-amber-50 text-amber-600 text-[11px] px-3 py-1 rounded-full font-bold border border-amber-200">Mode Edit Toko Lain</span>` : ''}
+          </div>
+
+          <div class="grid gap-4">
+            <div class="p-4 bg-purple-50/60 rounded-2xl border border-purple-100/80 space-y-3">
+              <span class="text-xs font-bold text-purple-900 block">🏢 Informasi Supplier / Toko Lain:</span>
+              <div>
+                <label class="text-[11px] font-bold text-zinc-700 block mb-1">Nama Toko Asal *</label>
+                <input id="tp_storeName" placeholder="Contoh: Toko Irjan Polman" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[11px] font-bold text-zinc-700 block mb-1">Nomor HP / WhatsApp Toko *</label>
+                  <input id="tp_storePhone" placeholder="Contoh: 083132317003" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-zinc-700 block mb-1">Alamat Lengkap Toko *</label>
+                  <input id="tp_storeAddress" placeholder="Contoh: Rea Barat Jl. Bunga-Bunga, Matakali, Polewali Mandar" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Barang *</label>
+              <input id="tp_name" placeholder="Contoh: Jaket Irjan Vintage" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="bg-amber-50/60 p-3 rounded-2xl border border-amber-200/60">
+                <label class="text-xs font-bold text-amber-900 block mb-1">Harga Beli / Dari Penjual (Rp) *</label>
+                <input id="tp_costPrice" type="number" placeholder="170000" class="w-full border border-amber-200 bg-white p-2.5 rounded-xl text-xs font-bold text-amber-900 outline-none focus:border-black">
+              </div>
+              <div class="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-200/60">
+                <label class="text-xs font-bold text-emerald-900 block mb-1">Harga Jual ke Pembeli (Rp) *</label>
+                <input id="tp_price" type="number" placeholder="210000" class="w-full border border-emerald-200 bg-white p-2.5 rounded-xl text-xs font-bold text-emerald-900 outline-none focus:border-black">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-bold text-zinc-700 block mb-1">Stok Utama</label>
+                <input id="tp_stock" type="number" placeholder="Contoh: 5" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-semibold outline-none focus:border-black disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed">
+              </div>
+              <div>
+                <label class="text-xs font-bold text-zinc-700 block mb-1">Kategori Produk</label>
+                <input id="tp_cat" placeholder="Contoh: Apparel, Shoes" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+              </div>
+            </div>
+
+            <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/60">
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Sampul Utama Barang</label>
+              <input type="file" id="tp_file" accept="image/*" onchange="compressAndPreviewTpImage(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
+              <img id="tp_preview" class="w-24 h-24 rounded-2xl hidden object-cover mt-3 border border-zinc-200 shadow-sm">
+            </div>
+
+            <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <span class="font-bold text-xs text-purple-950 block">🎨 Variasi Warna & Ukuran Stok</span>
+                  <p class="text-[11px] text-purple-800">Aktifkan untuk memberikan pilihan warna dan ukuran dari toko supplier.</p>
+                </div>
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-purple-900">
+                  <input type="checkbox" id="tpHasVariations" onchange="toggleVariationSection(this.checked, 'tp')" class="w-4 h-4 rounded accent-purple-800">
+                  Aktifkan Variasi
+                </label>
+              </div>
+
+              <div id="tpVariationContainer" class="hidden mt-3 pt-3 border-t border-purple-200 space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-bold text-zinc-800">Daftar Pilihan Warna:</span>
+                  <button onclick="addColorVariation('tp')" class="bg-purple-800 hover:bg-purple-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors">
+                    + Tambah Warna
+                  </button>
+                </div>
+                <div id="tpColorList" class="space-y-3"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mt-5 pt-3 border-t border-zinc-100">
+            <button onclick="saveTpProduct()" class="bg-black hover:bg-zinc-800 text-white px-6 py-3 rounded-2xl text-xs font-bold transition-all shadow-md active:scale-98">
+              ${editTpId ? '💾 Simpan Perubahan Barang Toko Lain' : '➕ Simpan Barang Toko Lain'}
+            </button>
+            ${editTpId ? `<button onclick="resetTpForm()" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-5 py-3 rounded-2xl text-xs font-bold transition-colors">Batal Edit</button>` : ''}
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-bold text-base text-zinc-900">Daftar Barang Toko Lain / Supplier (${thirdPartyProducts.length})</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">Barang dikelompokkan secara otomatis berdasarkan nama toko supplier.</p>
+            </div>
+            
+            <div class="relative w-full sm:w-64">
+              <input id="tpSearchInput" type="text" value="${searchTpStoreQuery}" oninput="searchTpStoreQuery=this.value;render();focusTpSearch()" placeholder="🔍 Cari nama toko supplier..." class="w-full bg-[#faf6f3] border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500 transition-colors">
+              ${searchTpStoreQuery ? `<button onclick="searchTpStoreQuery='';render()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            ${(() => {
+              if (thirdPartyProducts.length === 0) return '<p class="text-xs text-center text-zinc-400 py-6">Belum ada barang toko lain yang ditambahkan.</p>';
+
+              const filteredThirdParty = thirdPartyProducts.filter(p => {
+                const sName = p.storeName || 'Toko Pihak Ke-3 (Tanpa Nama)';
+                return sName.toLowerCase().includes(searchTpStoreQuery.toLowerCase());
+              });
+
+              if (filteredThirdParty.length === 0) return `<p class="text-xs text-center text-zinc-400 py-8">Toko supplier dengan nama "<b>${searchTpStoreQuery}</b>" tidak ditemukan.</p>`;
+
+              const grouped = filteredThirdParty.reduce((acc, curr) => {
+                const sName = curr.storeName || 'Toko Pihak Ke-3 (Tanpa Nama)';
+                if (!acc[sName]) {
+                  acc[sName] = {
+                    info: { storeName: sName, storePhone: curr.storePhone || '-', storeAddress: curr.storeAddress || '-' },
+                    items: []
+                  };
+                }
+                acc[sName].items.push(curr);
+                return acc;
+              }, {});
+
+              return Object.values(grouped).map(group => {
+                const storeKey = group.info.storeName;
+                const itemQuery = (searchTpItemQueries[storeKey] || '').toLowerCase();
+
+                const storeItemsFiltered = group.items.filter(p => {
+                  return p.name.toLowerCase().includes(itemQuery) || (p.cat && p.cat.toLowerCase().includes(itemQuery));
+                });
+
+                return `
+                <div class="bg-[#faf6f3] rounded-2xl border border-purple-200/80 overflow-hidden shadow-sm">
+                  <div class="bg-purple-100/70 p-4 border-b border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-base">🏪</span>
+                        <h4 class="font-bold text-sm text-purple-950">${group.info.storeName}</h4>
+                        <span class="bg-purple-200 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${group.items.length} Barang Total</span>
+                      </div>
+                      <p class="text-[11px] text-purple-800 mt-1">
+                        📍 ${group.info.storeAddress} • 📞 <a href="https://wa.me/${group.info.storePhone.replace(/[^0-9]/g, '')}" target="_blank" class="underline font-bold">${group.info.storePhone}</a>
+                      </p>
+                    </div>
+
+                    <button onclick="addTpProductToStore('${group.info.storeName.replace(/'/g, "\\'")}', '${group.info.storePhone.replace(/'/g, "\\'")}', '${group.info.storeAddress.replace(/'/g, "\\'")}')" class="bg-purple-900 hover:bg-purple-950 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 self-start sm:self-center active:scale-95">
+                      <span>➕</span>
+                      <span>Tambah Barang ke Toko Ini</span>
+                    </button>
+                  </div>
+
+                  <div class="p-3 bg-purple-50/50 border-b border-purple-200/50 flex justify-between items-center">
+                    <span class="text-[11px] font-bold text-purple-900">🔍 Filter Barang Toko Ini:</span>
+                    <div class="relative w-48 sm:w-56">
+                      <input id="tpItemSearch_${encodeURIComponent(storeKey)}" type="text" value="${searchTpItemQueries[storeKey] || ''}" oninput="updateTpItemSearch('${storeKey.replace(/'/g, "\\'")}', this.value)" placeholder="Cari barang di ${group.info.storeName}..." class="w-full bg-white border border-purple-200 pl-7 pr-6 py-1 rounded-lg text-[11px] outline-none focus:border-purple-600">
+                      <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400">🏷️</span>
+                      ${searchTpItemQueries[storeKey] ? `<button onclick="updateTpItemSearch('${storeKey.replace(/'/g, "\\'")}', '')" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
+                    </div>
+                  </div>
+
+                  <div class="p-3 divide-y divide-zinc-200/60 space-y-3">
+                    ${(() => {
+                      if (storeItemsFiltered.length === 0) return `<p class="text-xs text-center text-zinc-400 py-4">Barang dengan kata kunci "<b>${searchTpItemQueries[storeKey]}</b>" tidak ditemukan di toko ini.</p>`;
+
+                      return storeItemsFiltered.map(p => {
+                        const profit = p.price - (p.costPrice || p.price);
+                        let totalStockDisplay = p.stock;
+                        if (p.hasVariations && p.colors) {
+                          totalStockDisplay = p.colors.reduce((tot, c) => tot + c.sizes.reduce((szTot, sz) => szTot + (Number(sz.stock)||0), 0), 0);
+                        }
+
+                        return `
+                        <div class="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div class="flex items-center gap-3.5">
+                            <img src="${p.image}" class="w-14 h-14 rounded-xl object-cover border border-zinc-200 flex-shrink-0">
+                            <div>
+                              <h5 class="text-xs font-bold text-zinc-900">${p.name}</h5>
+                              <p class="text-[11px] text-zinc-500 mt-0.5">Kategori: <span class="font-medium text-zinc-700">${p.cat}</span> • Stok: <b>${totalStockDisplay}</b></p>
+                              
+                              <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px]">
+                                <span class="text-zinc-700 bg-white px-2 py-0.5 rounded-md border border-zinc-200">Harga Jual: <b>Rp ${p.price.toLocaleString('id-ID')}</b></span>
+                                <span class="text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">Modal: <b>Rp ${(p.costPrice || p.price).toLocaleString('id-ID')}</b></span>
+                                <span class="text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-bold">Untung: +Rp ${profit.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="flex items-center gap-1.5 self-end sm:self-center">
+                            <button onclick="editTpProduct(${p.id})" class="p-2 bg-white text-[#a48bc1] hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Edit">✏️ Edit</button>
+                            <button onclick="deleteTpProduct(${p.id})" class="p-2 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Hapus">🗑️</button>
+                          </div>
+                        </div>
+                      `}).join('');
+                    })()}
+                  </div>
+                </div>
+              `;
+              }).join('');
+            })()}
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- TAB 3: MANAJEMEN PEMBELI JISHSTORE -->
+    ${adminTab === 'buyers' ? `
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- SEKSI KIRI: LIST PEMBELI & FILTER STATUS -->
+        <div class="md:col-span-1 bg-white rounded-3xl p-5 shadow-sm border border-zinc-100 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+              <h3 class="font-bold text-sm text-zinc-900">👥 Daftar Pembeli</h3>
+              <span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">${buyers.length} Total</span>
+            </div>
+
+            <div class="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar pr-1">
+              ${buyers.map(b => {
+                const hasOrders = orders.some(o => o.buyerEmail === b.email);
+                const isSelected = selectedAdminChatEmail === b.email;
+                return `
+                <div class="p-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-purple-500 bg-purple-50/50' : 'border-zinc-100 bg-[#faf6f3] hover:border-zinc-300'}" onclick="selectedAdminChatEmail='${b.email}';render();">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p class="font-bold text-xs text-zinc-900">${b.name}</p>
+                      <p class="text-[10px] text-zinc-500 truncate max-w-[140px]">${b.email}</p>
+                    </div>
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${hasOrders ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-600'}">
+                      ${hasOrders ? 'Aktif' : 'Tidak Aktif'}
+                    </span>
+                  </div>
+                  <div class="mt-2 flex justify-between items-center pt-2 border-t border-zinc-200/50">
+                    <span class="text-[10px] text-zinc-500">📱 ${b.phone}</span>
+                    ${!hasOrders ? `
+                      <button onclick="deleteBuyer('${b.email}')" class="text-[10px] text-red-500 hover:text-red-700 font-bold bg-white px-2 py-0.5 rounded-lg border border-red-100">Hapus</button>
+                    ` : ''}
+                  </div>
+                </div>`;
+              }).join('') || '<p class="text-xs text-zinc-400 py-6 text-center">Belum ada pembeli terdaftar.</p>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- SEKSI KANAN: PESAN CHAT KE PEMBELI TERPILIH -->
+        <div class="md:col-span-2 bg-white rounded-3xl p-5 shadow-sm border border-zinc-100 flex flex-col justify-between h-[65vh]">
+          ${selectedAdminChatEmail ? (() => {
+            const currentSelectedBuyer = buyers.find(b => b.email === selectedAdminChatEmail);
+            const chatList = chatMessages.filter(c => c.buyerEmail === selectedAdminChatEmail);
+
+            return `
+              <div>
+                <div class="flex justify-between items-center pb-3 border-b mb-3">
+                  <div>
+                    <h3 class="font-bold text-sm text-zinc-900">💬 Chat dengan: ${currentSelectedBuyer?.name || 'Pembeli'}</h3>
+                    <p class="text-[10px] text-zinc-400">${selectedAdminChatEmail} • ${currentSelectedBuyer?.phone || '-'}</p>
+                  </div>
+                  <button onclick="selectedAdminChatEmail=null;render()" class="text-xs text-zinc-400 hover:text-zinc-600 font-bold">✕ Tutup</button>
+                </div>
+
+                <div id="adminChatBox" class="h-[42vh] overflow-y-auto space-y-3 pr-2 no-scrollbar">
+                  ${chatList.length > 0 ? chatList.map(m => `
+                    <div class="flex flex-col ${m.sender === 'admin' ? 'items-end' : 'items-start'}">
+                      <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'admin' ? 'bg-black text-white rounded-br-none' : 'bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
+                        <p>${m.text}</p>
+                        <span class="text-[9px] opacity-75 mt-1 block text-right">${m.time}</span>
+                      </div>
+                    </div>
+                  `).join('') : `
+                    <div class="h-full flex flex-col items-center justify-center text-zinc-400 py-12">
+                      <span class="text-2xl mb-1">💬</span>
+                      <p class="text-xs">Belum ada riwayat pesan dengan pembeli ini.</p>
+                    </div>
+                  `}
+                </div>
+              </div>
+
+              <div class="pt-3 border-t flex gap-2">
+                <input id="adminChatInput" type="text" placeholder="Tulis balasan pesan..." onkeypress="if(event.key==='Enter') sendAdminChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
+                <button onclick="sendAdminChat()" class="bg-black hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95">Kirim</button>
+              </div>
+            `;
+          })() : `
+            <div class="h-full flex flex-col items-center justify-center text-zinc-400 py-12">
+              <span class="text-4xl mb-2">💬</span>
+              <p class="text-xs font-bold text-zinc-600">Pilih pembeli dari daftar di sebelah kiri</p>
+              <p class="text-[11px] text-zinc-400 mt-0.5">Untuk melihat dan membalas obrolan pesan customer service.</p>
+            </div>
+          `}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- TAB 4: MANAJEMEN STATUS PESANAN -->
+    ${adminTab === 'orders' ? `
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-100">
+          <div>
+            <h3 class="font-bold text-base text-zinc-900">📋 Daftar Pesanan Masuk (${orders.length})</h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Kelola alur status pesanan, kurir pengantar, dan konfirmasi WhatsApp.</p>
+          </div>
+        </div>
+
+        ${(() => {
+          const unhandledOrders = orders.filter(o => o.status === 'Diproses');
+          if (unhandledOrders.length > 0) {
+            return `
+              <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl">⚠️</span>
+                  <div>
+                    <h4 class="text-xs font-bold text-amber-900">Pemberitahuan Pesanan Belum Diproses!</h4>
+                    <p class="text-[11px] text-amber-800 mt-0.5">Terdapat <b>${unhandledOrders.length} pesanan</b> yang masih berstatus <span class="font-bold">"Diproses"</span> dan belum ditangani oleh admin.</p>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+          return '';
+        })()}
+
+        <div class="space-y-4">
+          ${orders.map(o => {
+            const isExpanded = !!expandedOrders[o.id];
+            const isPickup = o.deliveryMethod === deliverySettings.pickupLabel;
+
+            return `
+            <div class="bg-[#faf6f3] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 shadow-sm space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs sm:text-sm text-zinc-900">Order ID: #${o.id}</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      o.status==='Selesai'?'bg-emerald-100 text-emerald-800':
+                      o.status==='Sudah Di-packing'?'bg-blue-100 text-blue-800':
+                      o.status==='Dalam Pengiriman'?'bg-purple-100 text-purple-800':
+                      o.status==='Dibatalkan'?'bg-red-100 text-red-800':
+                      'bg-amber-100 text-amber-800'
+                    }">${o.status}</span>
+                  </div>
+                  <p class="text-[11px] text-zinc-500 mt-0.5">${o.date} • Oleh: <b>${o.buyerName}</b> (${o.buyerEmail})</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <select onchange="updateOrderStatus(${o.id}, this.value)" class="text-xs font-bold p-2 rounded-xl border border-zinc-200 bg-white outline-none focus:border-purple-600">
+                    <option value="Diproses" ${o.status==='Diproses'?'selected':''}>⏳ Diproses</option>
+                    <option value="Sudah Di-packing" ${o.status==='Sudah Di-packing'?'selected':''}>📦 Sudah Di-packing</option>
+                    <option value="Dalam Pengiriman" ${o.status==='Dalam Pengiriman'?'selected':''}>🚚 Dalam Pengiriman</option>
+                    <option value="Selesai" ${o.status==='Selesai'?'selected':''}>✅ Selesai</option>
+                    <option value="Dibatalkan" ${o.status==='Dibatalkan'?'selected':''}>❌ Dibatalkan</option>
+                  </select>
+
+                  <button onclick="toggleOrderDetails(${o.id})" class="p-2 bg-white text-zinc-700 hover:bg-zinc-100 rounded-xl border border-zinc-200 font-bold text-xs transition-colors">
+                    ${isExpanded ? '▲ Sembunyikan' : '▼ Detail Item'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p class="text-xs font-bold text-zinc-800">Ringkasan Pesanan:</p>
+                <p class="text-xs text-zinc-600 mt-0.5">${o.text}</p>
+                <p class="text-xs text-purple-800 font-semibold mt-1">📍 Penyerahan: ${o.deliveryMethod || '-'}</p>
+              </div>
+
+              ${isExpanded && o.items && o.items.length > 0 ? `
+                <div class="bg-white p-3 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                  <p class="font-bold text-zinc-800 border-b pb-1">Detail Item Rincian Supplier:</p>
+                  ${o.items.map(item => `
+                    <div class="flex justify-between items-start pt-1">
+                      <div>
+                        <p class="font-semibold text-zinc-900">${item.name} (${item.qty}x)</p>
+                        ${item.color || item.size ? `<p class="text-[10px] text-zinc-500">Warna: ${item.color || '-'}, Ukuran: ${item.size || '-'}</p>` : ''}
+                        ${item.isThirdParty ? `
+                          <span class="text-[10px] text-purple-700 font-bold block mt-0.5">🏪 Supplier: ${item.storeName} (${item.storePhone})</span>
+                        ` : '<span class="text-[10px] text-zinc-400 block mt-0.5">📦 Produk Toko Utama</span>'}
+                      </div>
+                      <div class="text-right">
+                        <p class="font-bold text-zinc-800">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</p>
+                        ${item.isThirdParty ? `<p class="text-[10px] text-amber-700 font-semibold">Modal: Rp ${(item.costPrice * item.qty).toLocaleString('id-ID')}</p>` : ''}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-zinc-200/60">
+                <div class="text-xs text-zinc-600">
+                  <span>Total Bayar: <b class="text-purple-900">Rp ${o.total.toLocaleString('id-ID')}</b></span>
+                  ${o.courier ? `<span class="ml-3 font-semibold text-purple-950">🛵 Kurir: ${o.courier.name}</span>` : ''}
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  ${!isPickup ? `
+                    <button onclick="openCourierModal(${o.id})" class="bg-purple-900 hover:bg-purple-950 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                      <span>🛵</span> ${o.courier ? 'Ganti Kurir' : 'Pilih Kurir'}
+                    </button>
+                  ` : ''}
+
+                  <button onclick="openShippingWaModal(${o.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                    <span>💬</span> Konfirmasi WA
+                  </button>
+
+                  <button onclick="deleteOrder(${o.id})" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
+                    🗑️ Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+          `}).join('') || '<p class="text-xs text-center text-zinc-400 py-10">Belum ada transaksi pesanan masuk.</p>'}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- TAB 5: MANAJEMEN PENGIRIMAN & KURIR -->
+    ${adminTab === 'delivery' ? `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- PENGATURAN BIAYA & DISKON ONGKIR -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
+          <div class="border-b pb-3">
+            <h3 class="font-bold text-base text-zinc-900">🚚 Pengaturan Opsi Pengiriman</h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Kelola tarif pengiriman dan sistem diskon otomatis.</p>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Pengiriman Ke Alamat</label>
+            <input id="del_label" value="${deliverySettings.deliveryLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Ambil Sendiri di Toko</label>
+            <input id="pickup_label" value="${deliverySettings.pickupLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Biaya Pengiriman Standar (Rp)</label>
+            <input id="del_fee" type="number" value="${deliverySettings.deliveryFee}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-purple-900 outline-none focus:border-black">
+          </div>
+
+          <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
+            <span class="font-bold text-xs text-purple-950 block">🎁 Promo Diskon Biaya Ongkir:</span>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] font-bold text-zinc-700 block mb-1">Min. Item Jumlah Beli</label>
+                <input id="del_min_qty" type="number" value="${deliverySettings.minQtyForDiscount || 3}" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-black">
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-zinc-700 block mb-1">Jumlah Potongan (Rp)</label>
+                <input id="del_disc_amt" type="number" value="${deliverySettings.discountAmount || 10000}" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-bold text-emerald-700 outline-none focus:border-black">
+              </div>
+            </div>
+          </div>
+
+          <button onclick="saveDeliverySettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+            💾 Simpan Pengaturan Pengiriman
+          </button>
+        </div>
+
+        <!-- MANAJEMEN ANGGOTA KURIR TOKO -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
+          <div class="border-b pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-base text-zinc-900">🛵 Anggota Kurir Toko</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">Kelola kurir yang bertugas pengantaran pesanan.</p>
+            </div>
+            <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2.5 py-1 rounded-full">${couriers.length} Kurir</span>
+          </div>
+
+          <!-- FORM TAMBAH / EDIT KURIR -->
+          <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80 space-y-3">
+            <h4 class="font-bold text-xs text-zinc-800">${editCourierId ? '✏️ Edit Kurir' : '➕ Tambah Kurir Baru'}</h4>
+            <input id="c_name" placeholder="Nama Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
+            <input id="c_phone" placeholder="Nomor WhatsApp Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
+            <div>
+              <label class="text-[11px] font-bold text-zinc-600 block mb-1">Foto Kurir</label>
+              <input type="file" id="c_file" accept="image/*" onchange="compressAndPreviewCourierPhoto(this)" class="w-full text-xs text-zinc-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-zinc-200">
+              <img id="c_preview" class="w-12 h-12 rounded-full hidden object-cover mt-2 border border-zinc-200">
+            </div>
+
+            <div class="flex gap-2 pt-1">
+              <button onclick="saveCourier()" class="flex-1 bg-purple-900 hover:bg-purple-950 text-white py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
+                ${editCourierId ? '💾 Simpan Perubahan Kurir' : '➕ Tambah Kurir'}
+              </button>
+              ${editCourierId ? `<button onclick="resetCourierForm()" class="bg-zinc-200 hover:bg-zinc-300 text-zinc-700 px-3 py-2 rounded-xl text-xs font-bold">Batal</button>` : ''}
+            </div>
+          </div>
+
+          <!-- LIST KURIR -->
+          <div class="space-y-2 max-h-60 overflow-y-auto no-scrollbar pr-1">
+            ${couriers.map(cr => `
+              <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <img src="${cr.photo}" class="w-10 h-10 rounded-full object-cover border border-zinc-300">
+                  <div>
+                    <p class="font-bold text-xs text-zinc-900">${cr.name}</p>
+                    <p class="text-[11px] text-zinc-500">📱 ${cr.phone}</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <button onclick="editCourier(${cr.id})" class="p-1.5 bg-white text-purple-700 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs">✏️</button>
+                  <button onclick="deleteCourier(${cr.id})" class="p-1.5 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs">🗑️</button>
+                </div>
+              </div>
+            `).join('') || '<p class="text-xs text-zinc-400 text-center py-4">Belum ada kurir terdaftar.</p>'}
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- TAB 6: PENGATURAN TAMPILAN TOKO -->
+    ${adminTab === 'settings' ? `
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 max-w-2xl mx-auto space-y-4">
+        <div class="border-b pb-3">
+          <h3 class="font-bold text-base text-zinc-900">🎨 Pengaturan Tampilan Toko</h3>
+          <p class="text-xs text-zinc-400 mt-0.5">Ubah nama toko, gambar banner utama, dan teks promosi halaman depan.</p>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Toko *</label>
+          <input id="st_name" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Gambar Banner Utama</label>
+          <input type="file" id="st_file" accept="image/*" onchange="compressAndPreviewBanner(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
+          <img id="st_preview" src="${siteSettings.bannerImage}" class="w-full h-36 object-cover rounded-2xl mt-3 border border-zinc-200 shadow-sm">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 1</label>
+            <input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 2</label>
+            <input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Ringkas Banner</label>
+          <textarea id="st_desc" rows="2" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">${siteSettings.bannerDesc}</textarea>
+        </div>
+
+        <button onclick="saveSiteSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+          💾 Simpan Pengaturan Tampilan Toko
+        </button>
+      </div>
+    ` : ''}
+
+<!-- TAB 6: PENGATURAN AKUN ADMIN (DENGAN PASSWORD LAMA) -->
+    ${adminTab === 'adminSettings' ? `
+      <div class="bg-white rounded-3xl p-6 shadow-sm border max-w-lg mx-auto space-y-4">
+        <h3 class="font-bold text-base text-zinc-900 border-b pb-2">⚙️ Pengaturan Akun Admin</h3>
+        <p class="text-xs text-zinc-500">Masukkan password lama admin untuk memvalidasi perubahan informasi akun.</p>
+
+        <div class="space-y-3">
+          <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200">
+            <label class="text-[11px] font-bold text-amber-900 block mb-1">🔑 Password Lama Admin (Wajib Diisi)*</label>
+            <input id="adm_old_pass" type="password" placeholder="Masukkan password lama..." class="w-full border border-amber-300 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-black">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Email Admin Baru</label>
+            <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Nomor WhatsApp Admin</label>
+            <input id="adm_wa" type="tel" value="${adminAccount.phone}" class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Password Admin Baru</label>
+            <input id="adm_pass" type="password" placeholder="Password baru..." class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Konfirmasi Password Admin Baru</label>
+            <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru..." class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
+          </div>
+
+        <button onclick="saveAdminSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+          💾 Simpan Pengaturan Admin
+        </button>
+
+        <div class="pt-4 border-t border-zinc-100">
+          <button onclick="logoutUser()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+            <span>🚪</span> Keluar Aplikasi
+          </button>
+        </div>
+      </div>
+    ` : ''}
+  </div>`;
+}
+
+// --- FUNGSI MODAL KURIR ADMIN ---
+function openCourierModal(orderId) {
+  activeAssignOrderId = orderId;
+  const o = orders.find(x => x.id === orderId);
+  selectedCourierIdInModal = o && o.courier ? o.courier.id : null;
+
+  const listContainer = document.getElementById('courierSelectionList');
+  if (couriers.length === 0) {
+    listContainer.innerHTML = '<p class="text-xs text-zinc-400 py-4 text-center">Belum ada kurir. Tambahkan kurir di tab Pengiriman & Kurir.</p>';
+  } else {
+    listContainer.innerHTML = couriers.map(cr => {
+      const isChecked = selectedCourierIdInModal === cr.id;
+      return `
+      <label class="flex items-center justify-between p-3 rounded-2xl border ${isChecked ? 'border-purple-600 bg-purple-50' : 'border-zinc-200 bg-[#faf6f3]'} cursor-pointer hover:border-purple-300 transition-all">
+        <div class="flex items-center gap-3">
+          <input type="radio" name="modalCourierSelect" value="${cr.id}" ${isChecked ? 'checked' : ''} onchange="selectedCourierIdInModal=${cr.id}" class="accent-purple-800">
+          <img src="${cr.photo}" class="w-9 h-9 rounded-full object-cover border border-zinc-300">
+          <div>
+            <p class="text-xs font-bold text-zinc-900">${cr.name}</p>
+            <p class="text-[10px] text-zinc-500">📱 ${cr.phone}</p>
+          </div>
+        </div>
+      </label>`;
+    }).join('');
+  }
+
+  document.getElementById('courierModal').classList.remove('hidden');
+}
+
+function closeCourierModal() {
+  document.getElementById('courierModal').classList.add('hidden');
+  activeAssignOrderId = null;
+  selectedCourierIdInModal = null;
+}
+
+function confirmCourierAssignment() {
+  if (!activeAssignOrderId) return;
+  if (!selectedCourierIdInModal) return showToast('Pilih salah satu kurir!');
+
+  const cr = couriers.find(c => c.id === selectedCourierIdInModal);
+  const o = orders.find(x => x.id === activeAssignOrderId);
+
+  if (cr && o) {
+    o.courier = cr;
+    save();
+    closeCourierModal();
+    render();
+    showToast('Kurir berhasil diset untuk pesanan ini!');
+  }
+}
+
+// --- FUNGSI MODAL WA SHIPPING ADMIN ---
+function openShippingWaModal(orderId) {
+  activeShippingWaOrderId = orderId;
+  const o = orders.find(x => x.id === orderId);
+  const isPickup = o && o.deliveryMethod === deliverySettings.pickupLabel;
+
+  const courierContainer = document.getElementById('courierSelectContainer');
+  const optCourierOnly = document.getElementById('optCourierOnly');
+  const optBoth = document.getElementById('optBoth');
+  const courierSelect = document.getElementById('shippingCourierSelect');
+
+  courierSelect.innerHTML = '<option value="">-- Pilih Kurir Bertugas --</option>' + 
+    couriers.map(cr => `<option value="${cr.id}" ${o && o.courier && o.courier.id === cr.id ? 'selected' : ''}>🛵 ${cr.name} (${cr.phone})</option>`).join('');
+
+  if (isPickup) {
+    courierContainer.classList.add('hidden');
+    optCourierOnly.classList.add('hidden');
+    optBoth.classList.add('hidden');
+    
+    const buyerRadio = document.querySelector('input[name="shippingWaTarget"][value="buyer"]');
+    if (buyerRadio) buyerRadio.checked = true;
+  } else {
+    courierContainer.classList.remove('hidden');
+    optCourierOnly.classList.remove('hidden');
+    optBoth.classList.remove('hidden');
+
+    const bothRadio = document.querySelector('input[name="shippingWaTarget"][value="both"]');
+    if (bothRadio) bothRadio.checked = true;
+  }
+
+  document.getElementById('shippingWaModal').classList.remove('hidden');
+}
+
+function closeShippingWaModal() {
+  document.getElementById('shippingWaModal').classList.add('hidden');
+  activeShippingWaOrderId = null;
+}
+
+function executeShippingWaConfirmation() {
+  if (!activeShippingWaOrderId) return;
+  const o = orders.find(x => x.id === activeShippingWaOrderId);
+  if (!o) return;
+
+  const isPickup = o.deliveryMethod === deliverySettings.pickupLabel;
+  const courierSelectVal = document.getElementById('shippingCourierSelect').value;
+  const targetRadio = document.querySelector('input[name="shippingWaTarget"]:checked');
+  const target = targetRadio ? targetRadio.value : 'buyer';
+
+  if (!isPickup && (target === 'courier' || target === 'both' || courierSelectVal)) {
+    if (!courierSelectVal && (target === 'courier' || target === 'both')) {
+      return showToast('Pilih kurir bertugas terlebih dahulu!');
+    }
+    if (courierSelectVal) {
+      const cr = couriers.find(c => c.id === Number(courierSelectVal));
+      if (cr) o.courier = cr;
+    }
+  }
+
+  o.status = 'Dalam Pengiriman';
+  save();
+
+  const cleanBuyerPhone = o.buyerPhone ? o.buyerPhone.replace(/[^0-9]/g, '') : '';
+  const cleanCourierPhone = o.courier ? o.courier.phone.replace(/[^0-9]/g, '') : '';
+
+  let buyerText = "";
+  if (isPickup) {
+    buyerText = `Halo kak *${o.buyerName}*,\n\nPesanan Anda di *${siteSettings.storeName}* dengan ID Pesanan *#${o.id}* sudah siap untuk diambil di toko!\n\n📋 *Ringkasan Barang:* ${o.text}\n💰 *Total Pembayaran:* Rp ${o.total.toLocaleString('id-ID')}\n\nSilakan datang ke toko kami. Terima kasih!`;
+  } else {
+    buyerText = `Halo kak *${o.buyerName}*,\n\nPesanan Anda di *${siteSettings.storeName}* dengan ID Pesanan *#${o.id}* saat ini *SEDANG DALAM PENGIRIMAN* oleh kurir kami!\n\n📋 *Ringkasan Barang:* ${o.text}\n💰 *Total Pembayaran:* Rp ${o.total.toLocaleString('id-ID')}\n🛵 *Kurir Pengantar:* ${o.courier ? o.courier.name : '-'}\n📱 *No. Kurir:* ${o.courier ? o.courier.phone : '-'}\n\nMohon bersiap menerima pesanan di alamat tujuan. Terima kasih!`;
+  }
+
+  let courierText = `Halo *${o.courier ? o.courier.name : 'Kurir'}*,\n\nAda tugas pengantaran pesanan baru dari *${siteSettings.storeName}*:\n-------------------------------------\n📦 *ID Pesanan:* #${o.id}\n👤 *Nama Pembeli:* ${o.buyerName}\n📱 *No. WA Pembeli:* ${o.buyerPhone}\n📍 *Alamat Tujuan:* ${o.buyerAddress}\n-------------------------------------\n📋 *Barang:* ${o.text}\n💰 *Total Tagihan:* Rp ${o.total.toLocaleString('id-ID')}\n-------------------------------------\nMohon segera diantarkan ke alamat tujuan. Terima kasih!`;
+
+  if (target === 'buyer') {
+    if (cleanBuyerPhone) window.open(`https://wa.me/${cleanBuyerPhone}?text=${encodeURIComponent(buyerText)}`, '_blank');
+  } else if (target === 'courier') {
+    if (cleanCourierPhone) window.open(`https://wa.me/${cleanCourierPhone}?text=${encodeURIComponent(courierText)}`, '_blank');
+  } else if (target === 'both') {
+    if (cleanBuyerPhone) window.open(`https://wa.me/${cleanBuyerPhone}?text=${encodeURIComponent(buyerText)}`, '_blank');
+    setTimeout(() => {
+      if (cleanCourierPhone) window.open(`https://wa.me/${cleanCourierPhone}?text=${encodeURIComponent(courierText)}`, '_blank');
+    }, 1000);
+  }
+
+  closeShippingWaModal();
+  render();
+  showToast('Status diperbarui menjadi Dalam Pengiriman & Pesan WA dikirim!');
+}
+
+function updateOrderStatus(orderId, newStatus) {
+  const o = orders.find(x => x.id === orderId);
+  if (o) {
+    o.status = newStatus;
+    save();
+    render();
+    showToast('Status pesanan berhasil diperbarui!');
+  }
+}
+
+function deleteOrder(orderId) {
+  if (confirm('Yakin ingin menghapus pesanan ini?')) {
+    orders = orders.filter(x => x.id !== orderId);
+    save();
+    render();
+    showToast('Pesanan berhasil dihapus');
+  }
+}
+
+// --- FUNGSI ADMIN CHAT ---
+function sendAdminChat() {
+  const input = document.getElementById('adminChatInput');
+  const txt = input ? input.value.trim() : '';
+  if (!txt || !selectedAdminChatEmail) return;
+
+  chatMessages.push({
+    id: Date.now(),
+    buyerEmail: selectedAdminChatEmail,
+    sender: 'admin',
+    text: txt,
+    time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  });
+
+  save();
+  render();
+  setTimeout(() => {
+    const chatBox = document.getElementById('adminChatBox');
+    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+  }, 100);
+}
+
+function deleteBuyer(email) {
+  if (confirm('Hapus pembeli ini dari daftar?')) {
+    buyers = buyers.filter(b => b.email !== email);
+    save();
+    render();
+    showToast('Pembeli berhasil dihapus');
+  }
+}
+
+// --- FUNGSI FORM PRODUK TOKO LAIN (THIRD-PARTY) ---
+function saveTpProduct() {
+  const storeName = document.getElementById('tp_storeName').value.trim();
+  const storePhone = document.getElementById('tp_storePhone').value.trim();
+  const storeAddress = document.getElementById('tp_storeAddress').value.trim();
+  const name = document.getElementById('tp_name').value.trim();
+  const costPrice = Number(document.getElementById('tp_costPrice').value);
+  const price = Number(document.getElementById('tp_price').value);
+  const stock = Number(document.getElementById('tp_stock').value) || 0;
+  const cat = document.getElementById('tp_cat').value.trim() || 'General';
+  const hasVariations = document.getElementById('tpHasVariations').checked;
+
+  if (!storeName || !storePhone || !storeAddress || !name || !costPrice || !price) {
+    return showToast('Lengkapi nama toko, kontak, alamat, nama barang, harga beli, dan harga jual!');
+  }
+
+  const cleanStorePhone = storePhone.replace(/[^0-9]/g, '');
+
+  let colorsList = [];
+  if (hasVariations) {
+    colorsList = collectColorsData('tp');
+    if (colorsList.length === 0) return showToast('Tambahkan minimal 1 warna variasi!');
+  }
+
+  if (editTpId) {
+    const idx = thirdPartyProducts.findIndex(p => p.id === editTpId);
+    if (idx > -1) {
+      thirdPartyProducts[idx] = {
+        ...thirdPartyProducts[idx],
+        storeName,
+        storePhone: cleanStorePhone,
+        storeAddress,
+        name,
+        costPrice,
+        price,
+        stock,
+        cat,
+        image: tempTpImg || thirdPartyProducts[idx].image,
+        hasVariations,
+        colors: colorsList
+      };
+    }
+  } else {
+    thirdPartyProducts.unshift({
+      id: Date.now(),
+      isThirdParty: true,
+      storeName,
+      storePhone: cleanStorePhone,
+      storeAddress,
+      name,
+      costPrice,
+      price,
+      stock,
+      cat,
+      image: tempTpImg || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
+      hasVariations,
+      colors: colorsList
+    });
+  }
+
+  save();
+  resetTpForm();
+  render();
+  showToast('Barang toko lain berhasil disimpan!');
+}
+
+function editTpProduct(id) {
+  const p = thirdPartyProducts.find(x => x.id === id);
+  if (!p) return;
+
+  editTpId = p.id;
+  tempTpImg = p.image;
+  tempTpProductColors = JSON.parse(JSON.stringify(p.colors || []));
+
+  render();
+
+  setTimeout(() => {
+    document.getElementById('tp_storeName').value = p.storeName || '';
+    document.getElementById('tp_storePhone').value = p.storePhone || '';
+    document.getElementById('tp_storeAddress').value = p.storeAddress || '';
+    document.getElementById('tp_name').value = p.name;
+    document.getElementById('tp_costPrice').value = p.costPrice || p.price;
+    document.getElementById('tp_price').value = p.price;
+    document.getElementById('tp_stock').value = p.stock;
+    document.getElementById('tp_cat').value = p.cat;
+
+    const pr = document.getElementById('tp_preview');
+    if (pr) { pr.src = p.image; pr.classList.remove('hidden'); }
+
+    const chk = document.getElementById('tpHasVariations');
+    if (chk) {
+      chk.checked = !!p.hasVariations;
+      toggleVariationSection(chk.checked, 'tp');
+      if (p.hasVariations) {
+        renderColorList('tp', tempTpProductColors);
+      }
+    }
+
+    const container = document.getElementById('tpFormContainer');
+    if (container) container.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+function deleteTpProduct(id) {
+  if (confirm('Yakin ingin menghapus barang toko lain ini?')) {
+    thirdPartyProducts = thirdPartyProducts.filter(x => x.id !== id);
+    save();
+    render();
+    showToast('Barang berhasil dihapus!');
+  }
+}
+
+function resetTpForm() {
+  editTpId = null;
+  tempTpImg = '';
+  tempTpProductColors = [];
+  render();
+}
+
+function addTpProductToStore(storeName, storePhone, storeAddress) {
+  resetTpForm();
+  setTimeout(() => {
+    document.getElementById('tp_storeName').value = storeName;
+    document.getElementById('tp_storePhone').value = storePhone;
+    document.getElementById('tp_storeAddress').value = storeAddress;
+
+    const container = document.getElementById('tpFormContainer');
+    if (container) container.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+function focusTpSearch() {
+  const el = document.getElementById('tpSearchInput');
+  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
+function updateTpItemSearch(storeName, val) {
+  searchTpItemQueries[storeName] = val;
+  render();
+  setTimeout(() => {
+    const el = document.getElementById(`tpItemSearch_${encodeURIComponent(storeName)}`);
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 50);
+}
+
+function compressAndPreviewTpImage(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      tempTpImg = e.target.result;
+      const pr = document.getElementById('tp_preview');
+      if (pr) { pr.src = tempTpImg; pr.classList.remove('hidden'); }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// --- FUNGSI HELPER VARIASI DUAL MODE ('main' / 'tp') ---
+function toggleVariationSection(checked, type) {
+  const container = document.getElementById(type === 'main' ? 'mainVariationContainer' : 'tpVariationContainer');
+  const stockInput = document.getElementById(type === 'main' ? 'ps' : 'tp_stock');
+
+  if (checked) {
+    if (container) container.classList.remove('hidden');
+    if (stockInput) { stockInput.disabled = true; stockInput.value = '0'; }
+    const list = type === 'main' ? tempProductColors : tempTpProductColors;
+    if (list.length === 0) {
+      addColorVariation(type);
+    } else {
+      renderColorList(type, list);
+    }
+  } else {
+    if (container) container.classList.add('hidden');
+    if (stockInput) stockInput.disabled = false;
+  }
+}
+
+function addColorVariation(type) {
+  const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+  targetArray.push({
+    name: '',
+    image: '',
+    sizes: [
+      { size: 'S', stock: 5 },
+      { size: 'M', stock: 5 }
+    ]
+  });
+  renderColorList(type, targetArray);
+}
+
+function removeColorVariation(type, index) {
+  const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+  targetArray.splice(index, 1);
+  renderColorList(type, targetArray);
+}
+
+function addSizeToColor(type, colorIndex) {
+  const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+  if (targetArray[colorIndex]) {
+    targetArray[colorIndex].sizes.push({ size: 'L', stock: 5 });
+    renderColorList(type, targetArray);
+  }
+}
+
+function removeSizeFromColor(type, colorIndex, sizeIndex) {
+  const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+  if (targetArray[colorIndex] && targetArray[colorIndex].sizes) {
+    targetArray[colorIndex].sizes.splice(sizeIndex, 1);
+    renderColorList(type, targetArray);
+  }
+}
+
+function renderColorList(type, colorsArray) {
+  const listContainer = document.getElementById(type === 'main' ? 'mainColorList' : 'tpColorList');
+  if (!listContainer) return;
+
+  listContainer.innerHTML = colorsArray.map((c, cIdx) => `
+    <div class="p-3 bg-white rounded-2xl border border-purple-200 space-y-2">
+      <div class="flex justify-between items-center gap-2">
+        <input type="text" value="${c.name}" placeholder="Nama Warna (cth: Merah)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].name=this.value" class="flex-1 border border-zinc-200 bg-[#faf6f3] p-2 rounded-xl text-xs font-bold outline-none">
+        <button onclick="removeColorVariation('${type}', ${cIdx})" class="text-red-500 hover:text-red-700 font-bold text-xs p-1">🗑️</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="file" accept="image/*" onchange="compressColorImg(this, '${type}', ${cIdx})" class="w-full text-[11px] text-zinc-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-purple-100 file:text-purple-900">
+        <img id="${type}_color_preview_${cIdx}" src="${c.image || 'https://via.placeholder.com/100'}" class="w-8 h-8 rounded-lg object-cover border border-zinc-200">
+      </div>
+
+      <div class="pt-2 border-t border-zinc-100">
+        <div class="flex justify-between items-center mb-1.5">
+          <span class="text-[11px] font-bold text-zinc-700">Ukuran & Stok Warna Ini:</span>
+          <button onclick="addSizeToColor('${type}', ${cIdx})" class="text-purple-800 hover:underline font-bold text-[11px]">+ Tambah Ukuran</button>
+        </div>
+        
+        <div class="space-y-1.5">
+          ${c.sizes.map((sz, sIdx) => `
+            <div class="flex items-center gap-2">
+              <input type="text" value="${sz.size}" placeholder="Ukuran (cth: 39 / XL)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].size=this.value" class="w-24 border border-zinc-200 p-1.5 rounded-lg text-xs font-semibold">
+              <input type="number" value="${sz.stock}" placeholder="Stok" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].stock=Number(this.value)" class="w-20 border border-zinc-200 p-1.5 rounded-lg text-xs font-bold text-emerald-800">
+              <button onclick="removeSizeFromColor('${type}', ${cIdx},${sIdx})" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function compressColorImg(input, type, colorIndex) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+      if (targetArray[colorIndex]) {
+        targetArray[colorIndex].image = e.target.result;
+        const imgEl = document.getElementById(`${type}_color_preview_${colorIndex}`);
+        if (imgEl) imgEl.src = e.target.result;
+      }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function collectColorsData(type) {
+  const listContainer = document.getElementById(type === 'main' ? 'mainColorList' : 'tpColorList');
+  if (!listContainer) return [];
+
+  const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+  return targetArray.map(c => ({
+    name: c.name || 'Warna Standard',
+    image: c.image || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500',
+    sizes: c.sizes ? c.sizes.map(s => ({ size: String(s.size).trim(), stock: Number(s.stock) || 0 })) : []
+  }));
+}
+
+// --- FUNGSI PENGATURAN ONGKIR & KURIR ---
+function saveDeliverySettings() {
+  const dLabel = document.getElementById('del_label').value.trim();
+  const pLabel = document.getElementById('pickup_label').value.trim();
+  const dFee = Number(document.getElementById('del_fee').value) || 0;
+  const minQty = Number(document.getElementById('del_min_qty').value) || 1;
+  const discAmt = Number(document.getElementById('del_disc_amt').value) || 0;
+
+  deliverySettings.deliveryLabel = dLabel || "🚚 Diantarkan ke Alamat";
+  deliverySettings.pickupLabel = pLabel || "🏪 Ambil Sendiri di Toko";
+  deliverySettings.deliveryFee = dFee;
+  deliverySettings.minQtyForDiscount = minQty;
+  deliverySettings.discountAmount = discAmt;
+
+  save();
+  render();
+  showToast('Pengaturan pengiriman berhasil disimpan!');
+}
+
+function saveCourier() {
+  const name = document.getElementById('c_name').value.trim();
+  const phone = document.getElementById('c_phone').value.trim();
+
+  if (!name || !phone) return showToast('Isi nama dan nomor WhatsApp kurir!');
+
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+
+  if (editCourierId) {
+    const idx = couriers.findIndex(c => c.id === editCourierId);
+    if (idx > -1) {
+      couriers[idx] = {
+        id: editCourierId,
+        name,
+        phone: cleanPhone,
+        photo: tempCourierPhoto || couriers[idx].photo
+      };
+    }
+  } else {
+    couriers.push({
+      id: Date.now(),
+      name,
+      phone: cleanPhone,
+      photo: tempCourierPhoto || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200"
+    });
+  }
+
+  save();
+  resetCourierForm();
+  render();
+  showToast('Data kurir berhasil disimpan!');
+}
+
+function editCourier(id) {
+  const cr = couriers.find(c => c.id === id);
+  if (!cr) return;
+
+  editCourierId = cr.id;
+  tempCourierPhoto = cr.photo;
+
+  document.getElementById('c_name').value = cr.name;
+  document.getElementById('c_phone').value = cr.phone;
+  const pr = document.getElementById('c_preview');
+  if (pr) { pr.src = cr.photo; pr.classList.remove('hidden'); }
+}
+
+function deleteCourier(id) {
+  if (confirm('Hapus kurir ini?')) {
+    couriers = couriers.filter(c => c.id !== id);
+    save();
+    render();
+    showToast('Kurir berhasil dihapus!');
+  }
+}
+
+function resetCourierForm() {
+  editCourierId = null;
+  tempCourierPhoto = '';
+  render();
+}
+
+function compressAndPreviewCourierPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      tempCourierPhoto = e.target.result;
+      const pr = document.getElementById('c_preview');
+      if (pr) { pr.src = tempCourierPhoto; pr.classList.remove('hidden'); }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// --- FUNGSI PENGATURAN TAMPILAN TOKO ---
+function saveSiteSettings() {
+  const stName = document.getElementById('st_name').value.trim();
+  const stT1 = document.getElementById('st_t1').value.trim();
+  const stT2 = document.getElementById('st_t2').value.trim();
+  const stDesc = document.getElementById('st_desc').value.trim();
+
+  if (!stName) return showToast('Nama toko tidak boleh kosong!');
+
+  siteSettings.storeName = stName;
+  siteSettings.bannerTitle1 = stT1;
+  siteSettings.bannerTitle2 = stT2;
+  siteSettings.bannerDesc = stDesc;
+  if (tempBannerImg) siteSettings.bannerImage = tempBannerImg;
+
+  save();
+  render();
+  showToast('Tampilan toko berhasil diperbarui!');
+}
+
+function compressAndPreviewBanner(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      tempBannerImg = e.target.result;
+      const pr = document.getElementById('st_preview');
+      if (pr) { pr.src = tempBannerImg; }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// --- INITIALIZATIONS ---
+render();
+</script>
+</body>
+</html>
