@@ -32,7 +32,13 @@
         // 3. Inisialisasi Firebase & Database
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
+        // --> LETAKKAN KODE INI DI SINI (Sebelum console.log) <--
+        db.ref('pembeli').on('value', (snapshot) => {
+            const dataPembeli = snapshot.val();
+            if (dataPembeli) {
+                console.log("Data berhasil diambil:", dataPembeli);
+            }
+        });
         console.log("Jish Store berhasil terhubung ke database online!");
     </script>
 </head>
