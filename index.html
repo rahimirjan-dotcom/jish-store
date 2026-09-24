@@ -1,3 +1,4 @@
+<store_file action="write" path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -152,57 +153,9 @@ let adminAccount = JSON.parse(localStorage.getItem('ssr_admin_acc')) || {
 let WA_NUMBER = adminAccount.phone;
 
 // --- STATE MANAGEMENT ---
-let products = JSON.parse(localStorage.getItem('ssr_v3')) || [
-  { 
-    id: 1, 
-    name: "Classic Sneaker White", 
-    price: 120000, 
-    stock: 0, 
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500", 
-    cat: "Shoes",
-    hasVariations: true,
-    colors: [
-      {
-        name: "Putih Classic",
-        image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500",
-        sizes: [
-          { size: "39", stock: 3 },
-          { size: "40", stock: 4 },
-          { size: "41", stock: 3 }
-        ]
-      },
-      {
-        name: "Hitam Premium",
-        image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=500",
-        sizes: [
-          { size: "39", stock: 2 },
-          { size: "40", stock: 0 },
-          { size: "41", stock: 5 }
-        ]
-      }
-    ]
-  },
-  { id: 2, name: "Linen Tote Bag Lavender", price: 88000, stock: 5, image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=500", cat: "Bags", hasVariations: false, colors: [] },
-  { id: 3, name: "Oversized Cotton Shirt", price: 135000, stock: 8, image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500", cat: "Apparel", hasVariations: false, colors: [] }
-];
+let products = JSON.parse(localStorage.getItem('ssr_v3')) || [];
 
-let thirdPartyProducts = JSON.parse(localStorage.getItem('ssr_tp')) || [
-  { 
-    id: 101, 
-    name: "Jaket Irjan Vintage", 
-    costPrice: 170000, 
-    price: 210000,     
-    stock: 4, 
-    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=500", 
-    cat: "Apparel",
-    isThirdParty: true,
-    storeName: "Toko Irjan Polman",
-    storeAddress: "Rea Barat Jl. Bunga-Bunga, Matakali, Polewali Mandar",
-    storePhone: "083132317003",
-    hasVariations: false,
-    colors: []
-  }
-];
+let thirdPartyProducts = JSON.parse(localStorage.getItem('ssr_tp')) || [];
 
 let couriers = JSON.parse(localStorage.getItem('ssr_couriers')) || [
   { id: 1, name: "Budi Santoso", phone: "081234567890", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" },
@@ -219,13 +172,10 @@ let siteSettings = JSON.parse(localStorage.getItem('ssr_s')) || {
   bannerImage: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800",
   bannerTitle1: "Koleksi Terbaru",
   bannerTitle2: "Jish Store",
-  bannerDesc: "Pilihan produk fashion & harian kualitas terbaik"
+  bannerDesc: "Pilihan produk harian kualitas terbaik"
 };
 
-let categorySizes = JSON.parse(localStorage.getItem('ssr_cat_sizes')) || {
-  "Shoes": { hasSize: true, sizes: ["38", "39", "40", "41", "42", "43"] },
-  "Apparel": { hasSize: true, sizes: ["S", "M", "L", "XL", "XXL"] }
-};
+let categorySizes = JSON.parse(localStorage.getItem('ssr_cat_sizes')) || {};
 
 let deliverySettings = JSON.parse(localStorage.getItem('ssr_del_s')) || {
   deliveryLabel: "🚚 Diantarkan ke Alamat",
@@ -421,7 +371,7 @@ function doReg() {
   buyers.push({ name: n, email: e, phone: cleanWa, address: a, pass: p, registeredAt: new Date().toISOString() });
   save();
 
-  const waMsg = encodeURIComponent("Terimakasih sudah mendaftar silahkan lanjut belanja!");
+  const waMsg = encodeURIComponent("Halo saya telah berhasil mendaftarkan akun saya di jish store!");
   window.open(`https://wa.me/${WA_NUMBER}?text=${waMsg}`, '_blank');
 
   showToast('Pendaftaran berhasil, silakan login!');
@@ -611,7 +561,7 @@ function renderNav() {
 // --- VIEW: SHOP ---
 function shop() {
   const allProds = getAllProducts();
-  const categoriesList = Array.from(new Set(['Shoes', 'Bags', 'Apparel', 'Accessories', ...allProds.map(p => p.cat).filter(Boolean)]));
+  const categoriesList = Array.from(new Set([...allProds.map(p => p.cat).filter(Boolean)]));
 
   let list = allProds.filter(p => {
     const matchCat = (filterCat === 'All') || (p.cat === filterCat);
@@ -1365,7 +1315,7 @@ function admin() {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="text-[11px] font-bold text-zinc-700 block mb-1">Nomor HP / WhatsApp Toko *</label>
-                  <input id="tp_storePhone" placeholder="Contoh: 083132317003" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
+                  <input id="tp_storePhone" placeholder="Contoh: 082351226931" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
                 </div>
                 <div>
                   <label class="text-[11px] font-bold text-zinc-700 block mb-1">Alamat Lengkap Toko *</label>
@@ -1397,7 +1347,7 @@ function admin() {
               </div>
               <div>
                 <label class="text-xs font-bold text-zinc-700 block mb-1">Kategori Produk</label>
-                <input id="tp_cat" placeholder="Contoh: Apparel, Shoes" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+                <input id="tp_cat" placeholder="Contoh: Elektronik, Makanan" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
               </div>
             </div>
 
@@ -1859,91 +1809,89 @@ function admin() {
       </div>
     ` : ''}
 
-    <!-- TAB 6: PENGATURAN TAMPILAN TOKO -->
+    <!-- TAB 6: TAMPILAN TOKO & BANNER -->
     ${adminTab === 'settings' ? `
       <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 max-w-2xl mx-auto space-y-4">
-        <div class="border-b pb-3">
-          <h3 class="font-bold text-base text-zinc-900">🎨 Pengaturan Tampilan Toko</h3>
-          <p class="text-xs text-zinc-400 mt-0.5">Ubah nama toko, gambar banner utama, dan teks promosi halaman depan.</p>
+        <h3 class="font-bold text-base text-zinc-900 border-b pb-3">🎨 Pengaturan Tampilan & Banner Toko</h3>
+
+        <div>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Toko Utama</label>
+          <input id="set_storeName" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
         </div>
 
         <div>
-          <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Toko *</label>
-          <input id="st_name" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 1</label>
+          <input id="set_bTitle1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
         </div>
 
         <div>
-          <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Gambar Banner Utama</label>
-          <input type="file" id="st_file" accept="image/*" onchange="compressAndPreviewBanner(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
-          <img id="st_preview" src="${siteSettings.bannerImage}" class="w-full h-36 object-cover rounded-2xl mt-3 border border-zinc-200 shadow-sm">
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 1</label>
-            <input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
-          </div>
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 2</label>
-            <input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
-          </div>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 2</label>
+          <input id="set_bTitle2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
         </div>
 
         <div>
-          <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Ringkas Banner</label>
-          <textarea id="st_desc" rows="2" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">${siteSettings.bannerDesc}</textarea>
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Singkat Banner</label>
+          <input id="set_bDesc" value="${siteSettings.bannerDesc}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+        </div>
+
+        <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80">
+          <label class="text-xs font-bold text-zinc-700 block mb-1">Gambar Banner Utama</label>
+          <input type="file" accept="image/*" onchange="compressAndPreviewBanner(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
+          <img id="banner_preview" src="${siteSettings.bannerImage}" class="w-full h-36 object-cover rounded-2xl mt-3 border border-zinc-200 shadow-sm">
         </div>
 
         <button onclick="saveSiteSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
-          💾 Simpan Pengaturan Tampilan Toko
+          💾 Simpan Perubahan Tampilan Toko
         </button>
       </div>
     ` : ''}
 
-<!-- TAB 6: PENGATURAN AKUN ADMIN (DENGAN PASSWORD LAMA) -->
-    ${adminTab === 'adminSettings' ? `
-      <div class="bg-white rounded-3xl p-6 shadow-sm border max-w-lg mx-auto space-y-4">
-        <h3 class="font-bold text-base text-zinc-900 border-b pb-2">⚙️ Pengaturan Akun Admin</h3>
-        <p class="text-xs text-zinc-500">Masukkan password lama admin untuk memvalidasi perubahan informasi akun.</p>
-
-        <div class="space-y-3">
-          <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200">
-            <label class="text-[11px] font-bold text-amber-900 block mb-1">🔑 Password Lama Admin (Wajib Diisi)*</label>
-            <input id="adm_old_pass" type="password" placeholder="Masukkan password lama..." class="w-full border border-amber-300 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-black">
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Email Admin Baru</label>
-            <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Nomor WhatsApp Admin</label>
-            <input id="adm_wa" type="tel" value="${adminAccount.phone}" class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Password Admin Baru</label>
-            <input id="adm_pass" type="password" placeholder="Password baru..." class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-zinc-700 block mb-1">Konfirmasi Password Admin Baru</label>
-            <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru..." class="w-full border bg-[#faf6f3] p-2.5 rounded-xl text-xs outline-none">
-          </div>
-
-        <button onclick="saveAdminSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
-          💾 Simpan Pengaturan Admin
-        </button>
-
-        <div class="pt-4 border-t border-zinc-100">
-          <button onclick="logoutUser()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2">
-            <span>🚪</span> Keluar Aplikasi
-          </button>
-        </div>
+    <!-- TAB 7: PENGATURAN KREDENSIAL ADMIN -->
+${adminTab === 'adminSettings' ? `
+  <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 max-w-xl mx-auto space-y-4">
+    <div class="border-b pb-3 flex items-center justify-between">
+      <div>
+        <h3 class="font-bold text-base text-zinc-900">⚙️ Pengaturan Akun Admin</h3>
+        <p class="text-xs text-zinc-400 mt-0.5">Ubah email login, password, dan nomor WhatsApp toko.</p>
       </div>
-    ` : ''}
-  </div>`;
+      <button onclick="logoutUser()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors">
+        🚪 Keluar Admin
+      </button>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-zinc-700 block mb-1">Nomor WhatsApp Utama Toko (Penerima Pesanan) *</label>
+      <input id="adm_wa" value="${adminAccount.phone}" placeholder="6281234567890" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-purple-950 outline-none focus:border-black">
+      <p class="text-[10px] text-zinc-400 mt-1">Gunakan format angka tanpa tanda + (contoh: 6281234567890)</p>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-zinc-700 block mb-1">Email Login Admin *</label>
+      <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+    </div>
+
+    <!-- FIELD PASSWORD LAMA -->
+    <div class="pt-2 border-t border-zinc-100">
+      <label class="text-xs font-bold text-red-600 block mb-1">Password / Kode Lama Admin *</label>
+      <input id="adm_old_pass" type="password" placeholder="Masukkan password lama untuk konfirmasi" class="w-full border border-red-200 bg-red-50/30 p-3 rounded-2xl text-xs font-medium outline-none focus:border-red-500">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-zinc-700 block mb-1">Password Baru Admin *</label>
+      <input id="adm_pass" type="password" placeholder="Masukkan password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-zinc-700 block mb-1">Konfirmasi Password Baru Admin *</label>
+      <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+    </div>
+
+    <button onclick="handleSaveAdminSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+      💾 Simpan Pengaturan Akun Admin
+    </button>
+  </div>
+` : ''}
+</div>`;
 }
 
 // --- FUNGSI MODAL KURIR ADMIN ---
@@ -2135,7 +2083,6 @@ function deleteBuyer(email) {
     showToast('Pembeli berhasil dihapus');
   }
 }
-
 // --- FUNGSI FORM PRODUK TOKO LAIN (THIRD-PARTY) ---
 function saveTpProduct() {
   const storeName = document.getElementById('tp_storeName').value.trim();
@@ -2535,8 +2482,104 @@ function compressAndPreviewBanner(input) {
   }
 }
 
+function handleSaveAdminSettings() {
+  const oldPassInput = document.getElementById('adm_old_pass').value;
+  const newPassInput = document.getElementById('adm_pass').value;
+  const confirmPassInput = document.getElementById('adm_confirm_pass').value;
+
+  // 1. Validasi Password Lama
+  if (!oldPassInput) {
+    alert('Harap masukkan password lama Anda untuk verifikasi!');
+    return;
+  }
+
+  if (oldPassInput !== adminAccount.pass) {
+    alert('Password lama yang Anda masukkan salah!');
+    return;
+  }
+
+  // 2. Validasi Password Baru & Konfirmasi
+  if (newPassInput || confirmPassInput) {
+    if (newPassInput !== confirmPassInput) {
+      alert('Password baru dan konfirmasi password tidak cocok!');
+      return;
+    }
+  }
+
+  // 3. Panggil fungsi simpan jika verifikasi berhasil
+  saveAdminSettings();
+}
+
 // --- INITIALIZATIONS ---
 render();
+</script>
+<!-- ========================================================================= -->
+<!-- INTEGRASI DATABASE CLOUD FIREBASE JISH-STORE (SINKRONISASI ANTAR PERANGKAT) -->
+<!-- ========================================================================= -->
+<script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    import { getDatabase, ref, set, onValue } from "https://gstatic.com";
+
+    // Konfigurasi resmi proyek Firebase Jish-Store Anda
+    const firebaseConfig = {
+        apiKey: "AIzaSyAmwnEOf3C2V2TLVQIzc73QY7qYMUKim90",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebaseio.com",
+        projectId: "jish-store",
+        storageBucket: "jish-store.firebasestorage.app",
+        messagingSenderId: "623518300532",
+        appId: "1:623518300532:web:e06f9e3f39ef7a5a261421",
+        measurementId: "G-NOFBVK259P"
+    };
+
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Alamat folder utama data toko online Anda di Cloud Database
+    const cloudStoreRef = ref(db, 'jish_store_cloud/data');
+
+    // -------------------------------------------------------------------------
+    // ALUR DATA A: OTOMATIS AMBIL DATA DARI CLOUD (REAL-TIME SINKRONISASI)
+    // -------------------------------------------------------------------------
+    // Setiap kali ada perubahan data (entah dari HP atau Laptop), fungsi ini otomatis 
+    // mendownload data terbaru ke memori perangkat dan memicu fungsi render() bawaan Anda.
+    onValue(cloudStoreRef, (snapshot) => {
+        const dataTerbaru = snapshot.val();
+        if (dataTerbaru) {
+            console.log("Menerima sinkronisasi data dari cloud...", dataTerbaru);
+
+            // Menyisipkan data cloud ke dalam sistem lokal aplikasi Anda
+            if (dataTerbaru.products) products = dataTerbaru.products;
+            if (dataTerbaru.thirdPartyProducts) thirdPartyProducts = dataTerbaru.thirdPartyProducts;
+            if (dataTerbaru.chatMessages) chatMessages = dataTerbaru.chatMessages;
+            
+            // PENTING: Memicu fungsi render() bawaan Anda agar layar HP/Laptop langsung terupdate
+            if (typeof render === "function") {
+                render(); 
+            }
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // ALUR DATA B: FUNGSI UNTUK MELEMPAR DATA LOKAL KE CLOUD INTERNET
+    // -------------------------------------------------------------------------
+    function simpanKeCloudDatabase() {
+        set(cloudStoreRef, {
+            products: typeof products !== 'undefined' ? products : [],
+            thirdPartyProducts: typeof thirdPartyProducts !== 'undefined' ? thirdPartyProducts : [],
+            chatMessages: typeof chatMessages !== 'undefined' ? chatMessages : [],
+            Buyers: typeof buyers !== 'undefined' ? buyers : [],
+            waktuUpdate: new Date().toLocaleString()
+        }).then(() => {
+            console.log("Data Jish Store berhasil tersinkronisasi ke seluruh HP & Laptop!");
+        }).catch((error) => {
+            console.error("Gagal sinkronisasi ke cloud:", error);
+        });
+    }
+
+    // Daftarkan fungsi agar bisa diakses oleh fungsi save() lama Anda
+    window.simpanKeCloudDatabase = simpanKeCloudDatabase;
 </script>
 </body>
 </html>
