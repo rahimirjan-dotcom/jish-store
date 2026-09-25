@@ -223,24 +223,55 @@ let expandedOrders = {};
 // State Temp untuk Admin Chat
 let selectedAdminChatEmail = null;
 
-// --- FUNGSI SIMPAN KE FIREBASE REALTIME DATABASE ---
+// --- FUNGSI SIMPAN KE FIREBASE REALTIME DATABASE & LOCALSTORAGE ---
 const save = () => {
-  // Jika objek database Firebase dari skrip module bawah sudah tersedia
-  if (window.db && window.dbRef && window.dbSet) {
+  // 1. Cadangkan ke localStorage agar data tidak hilang saat offline/refresh cepat
+  try {
+    localStorage.setItem('ssr_v3', JSON.stringify(products));
+    localStorage.setItem('ssr_tp', JSON.stringify(thirdPartyProducts));
+    localStorage.setItem('ssr_couriers', JSON.stringify(couriers));
+    localStorage.setItem('ssr_b', JSON.stringify(buyers));
+    localStorage.setItem('ssr_o', JSON.stringify(orders));
+    localStorage.setItem('ssr_s', JSON.stringify(siteSettings));
+    localStorage.setItem('ssr_cat_sizes', JSON.stringify(categorySizes));
+    localStorage.setItem('ssr_del_s', JSON.stringify(deliverySettings));
+    localStorage.setItem('ssr_chat', JSON.stringify(chatMessages));
+  } catch (e) {
+    console.warn("Gagal menyimpan ke localStorage:", e);
+  }
+
+  // 2. Simpan ke Firebase Realtime Database jika sudah siap
+  if (window.dbSet && window.dbRef && window.db) {
     window.dbSet(window.dbRef(window.db, 'app_data'), {
-      products: products,
-      thirdPartyProducts: thirdPartyProducts,
-      couriers: couriers,
-      buyers: buyers,
-      orders: orders,
-      siteSettings: siteSettings,
-      categorySizes: categorySizes,
-      deliverySettings: deliverySettings,
-      chatMessages: chatMessages,
-      adminAccount: adminAccount
+      products: products || [],
+      thirdPartyProducts: thirdPartyProducts || [],
+      couriers: couriers || [],
+      buyers: buyers || [],
+      orders: orders || [],
+      siteSettings: siteSettings || {},
+      categorySizes: categorySizes || {},
+      deliverySettings: deliverySettings || {},
+      chatMessages: chatMessages || [],
+      adminAccount: adminAccount || {}
     }).catch(err => console.error("Gagal menyimpan ke Firebase:", err));
   } else {
-    console.warn("Database Firebase belum siap, data gagal disimpan ke cloud.");
+    // Jika Firebase belum siap saat tombol diklik, coba lagi 1 detik kemudian
+    setTimeout(() => {
+      if (window.dbSet && window.dbRef && window.db) {
+        window.dbSet(window.dbRef(window.db, 'app_data'), {
+          products: products || [],
+          thirdPartyProducts: thirdPartyProducts || [],
+          couriers: couriers || [],
+          buyers: buyers || [],
+          orders: orders || [],
+          siteSettings: siteSettings || {},
+          categorySizes: categorySizes || {},
+          deliverySettings: deliverySettings || {},
+          chatMessages: chatMessages || [],
+          adminAccount: adminAccount || {}
+        });
+      }
+    }, 1000);
   }
 };
 
