@@ -1,4 +1,3 @@
-<store_file action="write" path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -144,7 +143,7 @@
 
 <script>
 // --- KONFIGURASI TOKO ---
-let adminAccount = JSON.parse(localStorage.getItem('ssr_admin_acc')) || {
+let adminAccount = {
   email: "admin@toko.com",
   pass: "admin123",
   phone: "6283132317003"
@@ -153,21 +152,19 @@ let adminAccount = JSON.parse(localStorage.getItem('ssr_admin_acc')) || {
 let WA_NUMBER = adminAccount.phone;
 
 // --- STATE MANAGEMENT ---
-let products = JSON.parse(localStorage.getItem('ssr_v3')) || [];
-
-let thirdPartyProducts = JSON.parse(localStorage.getItem('ssr_tp')) || [];
-
-let couriers = JSON.parse(localStorage.getItem('ssr_couriers')) || [
+let products = [];
+let thirdPartyProducts = [];
+let couriers = [
   { id: 1, name: "Budi Santoso", phone: "081234567890", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" },
   { id: 2, name: "Ahmad Rizki", phone: "085678901234", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" }
 ];
 
-let cart = JSON.parse(localStorage.getItem('ssr_c')) || [];
-let buyers = JSON.parse(localStorage.getItem('ssr_b')) || [];
-let orders = JSON.parse(localStorage.getItem('ssr_o')) || [];
-let chatMessages = JSON.parse(localStorage.getItem('ssr_chat')) || [];
+let cart = [];
+let buyers = [];
+let orders = [];
+let chatMessages = [];
 
-let siteSettings = JSON.parse(localStorage.getItem('ssr_s')) || {
+let siteSettings = {
   storeName: "Jish Store",
   bannerImage: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800",
   bannerTitle1: "Koleksi Terbaru",
@@ -175,9 +172,9 @@ let siteSettings = JSON.parse(localStorage.getItem('ssr_s')) || {
   bannerDesc: "Pilihan produk harian kualitas terbaik"
 };
 
-let categorySizes = JSON.parse(localStorage.getItem('ssr_cat_sizes')) || {};
+let categorySizes = {};
 
-let deliverySettings = JSON.parse(localStorage.getItem('ssr_del_s')) || {
+let deliverySettings = {
   deliveryLabel: "🚚 Diantarkan ke Alamat",
   pickupLabel: "🏪 Ambil Sendiri di Toko",
   deliveryFee: 15000,
@@ -186,6 +183,7 @@ let deliverySettings = JSON.parse(localStorage.getItem('ssr_del_s')) || {
   selectedMethod: ""
 };
 
+// Keranjang lokal & Sesi Login Pembeli/Admin tetap disimpan per-browser/per-HP
 let currentBuyer = JSON.parse(sessionStorage.getItem('ssr_cb') || 'null');
 let isAdmin = sessionStorage.getItem('ssr_ad') === '1';
 
@@ -225,18 +223,25 @@ let expandedOrders = {};
 // State Temp untuk Admin Chat
 let selectedAdminChatEmail = null;
 
+// --- FUNGSI SIMPAN KE FIREBASE REALTIME DATABASE ---
 const save = () => {
-  localStorage.setItem('ssr_v3', JSON.stringify(products));
-  localStorage.setItem('ssr_tp', JSON.stringify(thirdPartyProducts));
-  localStorage.setItem('ssr_couriers', JSON.stringify(couriers));
-  localStorage.setItem('ssr_c', JSON.stringify(cart));
-  localStorage.setItem('ssr_b', JSON.stringify(buyers));
-  localStorage.setItem('ssr_o', JSON.stringify(orders));
-  localStorage.setItem('ssr_s', JSON.stringify(siteSettings));
-  localStorage.setItem('ssr_cat_sizes', JSON.stringify(categorySizes));
-  localStorage.setItem('ssr_del_s', JSON.stringify(deliverySettings));
-  localStorage.setItem('ssr_chat', JSON.stringify(chatMessages));
-  localStorage.setItem('ssr_admin_acc', JSON.stringify(adminAccount));
+  // Jika objek database Firebase dari skrip module bawah sudah tersedia
+  if (window.db && window.dbRef && window.dbSet) {
+    window.dbSet(window.dbRef(window.db, 'app_data'), {
+      products: products,
+      thirdPartyProducts: thirdPartyProducts,
+      couriers: couriers,
+      buyers: buyers,
+      orders: orders,
+      siteSettings: siteSettings,
+      categorySizes: categorySizes,
+      deliverySettings: deliverySettings,
+      chatMessages: chatMessages,
+      adminAccount: adminAccount
+    }).catch(err => console.error("Gagal menyimpan ke Firebase:", err));
+  } else {
+    console.warn("Database Firebase belum siap, data gagal disimpan ke cloud.");
+  }
 };
 
 function showToast(msg) {
@@ -2530,21 +2535,35 @@ render();
   };
 
   const app = initializeApp(firebaseConfig);
-  
   // 2. Inisialisasi Database
-  const db = getDatabase(app);
+const db = getDatabase(app);
 
-  // 3. Contoh membaca data secara realtime (Setiap ada perubahan di HP lain, HP ini otomatis update)
-  const tokoRef = ref(db, 'pengaturan_toko');
-  onValue(tokoRef, (snapshot) => {
-    const data = snapshot.val();
-    console.log("Data terbaru dari cloud/HP lain:", data);
-  });
+// 3. Membaca dan Menyelaraskan Data Realtime Antar HP
+onValue(ref(db, 'app_data'), (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    if (data.products) products = data.products;
+    if (data.thirdPartyProducts) thirdPartyProducts = data.thirdPartyProducts;
+    if (data.couriers) couriers = data.couriers;
+    if (data.buyers) buyers = data.buyers;
+    if (data.orders) orders = data.orders;
+    if (data.siteSettings) siteSettings = data.siteSettings;
+    if (data.categorySizes) categorySizes = data.categorySizes;
+    if (data.deliverySettings) deliverySettings = data.deliverySettings;
+    if (data.chatMessages) chatMessages = data.chatMessages;
+    if (data.adminAccount) adminAccount = data.adminAccount;
 
-  // Membuka akses ke fungsi global jika dibutuhkan oleh fungsi JavaScript lama Anda
-  window.db = db;
-  window.dbRef = ref;
-  window.dbSet = set;
+    // Refresh otomatis tampilan halaman
+    if (typeof render === 'function') {
+      render();
+    }
+  }
+});
+
+// Membuka akses ke fungsi global
+window.db = db;
+window.dbRef = ref;
+window.dbSet = set;
 </script>
 </body>
 </html>
