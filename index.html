@@ -927,7 +927,6 @@ function sendBuyerChat() {
   
   chatMessages.push(newMsg);
   
-  // Render langsung container chat secara lokal tanpa mereset seluruh halaman agar input tidak kehilangan fokus
   const chatBox = document.getElementById('chatBoxBuyer');
   if (chatBox) {
     if (chatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
@@ -946,7 +945,7 @@ function sendBuyerChat() {
     input.focus();
   }
   
-  save(); // Sinkronisasi latar belakang ke IndexedDB & Firebase
+  save();
 }
 
 // --- FUNGSI EKSPOR LAPORAN KEUANGAN KE CSV ---
@@ -977,7 +976,7 @@ function exportFinanceCSV() {
     return true;
   });
 
-  let csvContent = "\uFEFF"; // BOM untuk Excel UTF-8
+  let csvContent = "\uFEFF";
   csvContent += "=== LAPORAN KEUANGAN JISH STORE ===\n";
   csvContent += `Periode Filter:,${financeDateFilter.toUpperCase()}\n`;
   csvContent += `Tanggal Ekspor:,${new Date().toLocaleString('id-ID')}\n\n`;
@@ -1551,7 +1550,6 @@ function sendAdminChat() {
   
   chatMessages.push(newMsg);
   
-  // Render langsung container chat admin secara lokal tanpa mereset total halaman
   const chatBox = document.getElementById('adminChatBox');
   if (chatBox) {
     if (chatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
@@ -1987,11 +1985,9 @@ onValue(ref(db, 'app_data'), (snapshot) => {
       }
     }
 
-    const hasIncomingChatUpdate = data.chatMessages && data.chatMessages.length !== chatMessages.length;
     applyDataToState(data);
     saveToIndexedDB('full_app_state', data);
     
-    // Jangan lakukan render ulang total halaman jika pengguna sedang berada di menu chat aktif (mencegah lag pengetikan)
     if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) {
       return;
     }
