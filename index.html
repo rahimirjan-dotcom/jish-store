@@ -1010,13 +1010,20 @@ async function exportAppData() {
     showToast('Sedang menyiapkan file backup & gambar...');
     const zip = new JSZip();
 
+    // LAKUKAN KLONING DATA (DEEP COPY) 
+    // Agar data asli di aplikasi tidak ikut berubah/rusak saat proses export
+    const exportProducts = JSON.parse(JSON.stringify(products));
+    const exportThirdParty = JSON.parse(JSON.stringify(thirdPartyProducts));
+    const exportCouriers = JSON.parse(JSON.stringify(couriers));
+    const exportSiteSettings = JSON.parse(JSON.stringify(siteSettings));
+
     const exportObj = {
-      products,
-      thirdPartyProducts,
-      couriers,
+      products: exportProducts,
+      thirdPartyProducts: exportThirdParty,
+      couriers: exportCouriers,
       buyers,
       orders,
-      siteSettings,
+      siteSettings: exportSiteSettings,
       categorySizes,
       deliverySettings,
       chatMessages,
@@ -1030,7 +1037,8 @@ async function exportAppData() {
     zip.file("database.json", JSON.stringify(exportObj, null, 2));
     const imgFolder = zip.folder("images");
 
-    products.forEach((p) => {
+    // Proses gambar hanya pada data kloningan (exportProducts)
+    exportProducts.forEach((p) => {
       if (p.image && p.image.startsWith('data:image')) {
         const base64Data = p.image.replace(/^data:image\/\w+;base64,/, "");
         imgFolder.file(`product_main_${p.id}.png`, base64Data, {base64: true});
@@ -1047,7 +1055,7 @@ async function exportAppData() {
       }
     });
 
-    thirdPartyProducts.forEach((p) => {
+    exportThirdParty.forEach((p) => {
       if (p.image && p.image.startsWith('data:image')) {
         const base64Data = p.image.replace(/^data:image\/\w+;base64,/, "");
         imgFolder.file(`tp_product_${p.id}.png`, base64Data, {base64: true});
@@ -1064,7 +1072,7 @@ async function exportAppData() {
       }
     });
 
-    couriers.forEach((cr) => {
+    exportCouriers.forEach((cr) => {
       if (cr.photo && cr.photo.startsWith('data:image')) {
         const b64 = cr.photo.replace(/^data:image\/\w+;base64,/, "");
         imgFolder.file(`courier_${cr.id}.png`, b64, {base64: true});
@@ -1072,12 +1080,12 @@ async function exportAppData() {
       }
     });
 
-    if (siteSettings.bannerImages) {
-      siteSettings.bannerImages.forEach((bImg, bIdx) => {
+    if (exportSiteSettings.bannerImages) {
+      exportSiteSettings.bannerImages.forEach((bImg, bIdx) => {
         if (bImg && bImg.startsWith('data:image')) {
           const b64 = bImg.replace(/^data:image\/\w+;base64,/, "");
           imgFolder.file(`banner_${bIdx}.png`, b64, {base64: true});
-          siteSettings.bannerImages[bIdx] = `images/banner_${bIdx}.png`;
+          exportSiteSettings.bannerImages[bIdx] = `images/banner_${bIdx}.png`;
         }
       });
     }
@@ -1086,8 +1094,7 @@ async function exportAppData() {
     saveAs(content, `jish_store_complete_backup_${new Date().toISOString().slice(0,10)}.zip`);
     showToast('Backup lengkap beserta gambar berhasil diunduh!');
     
-    save();
-    render();
+    // Perhatikan: Perintah save() dihapus dari sini agar data asli di aplikasi tidak tertimpa!
   } catch (err) {
     console.error(err);
     alert('Terjadi kesalahan saat membuat backup ZIP.');
@@ -1993,21 +2000,72 @@ window.dbSet = set;
 onValue(ref(db, 'app_data'), (snapshot) => {
   const data = snapshot.val();
   if (data) {
+    // Deteksi pesanan baru untuk admin
     if (orders.length > 0 && data.orders && data.orders.length > orders.length && isAdmin) {
       playNotificationSound();
       showToast('🔔 Ada pesanan baru masuk!');
     }
+
+    // Deteksi pesan chat baru dari pembeli untuk admin
     if (chatMessages.length > 0 && data.chatMessages && data.chatMessages.length > chatMessages.length && isAdmin) {
       const latestMsg = data.chatMessages[data.chatMessages.length - 1];
       if (latestMsg && latestMsg.sender === 'buyer') {
         playNotificationSound();
         showToast(`💬 Pesan baru dari ${latestMsg.buyerEmail}`);
+        
+        // --- TAMBAHAN: Update kotak chat admin secara instan tanpa render ulang halaman ---
+        if (view === 'admin' && adminTab === 'buyers' && selectedAdminChatEmail === latestMsg.buyerEmail) {
+          const adminChatBox = document.getElementById('adminChatBox');
+          if (adminChatBox) {
+            // Hapus placeholder "belum ada pesan" jika ada
+            if (adminChatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+              adminChatBox.innerHTML = '';
+            }
+            // Tambahkan pesan baru secara langsung ke bawah
+            adminChatBox.innerHTML += `
+              <div class="flex flex-col items-start">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                  <p>${latestMsg.text}</p>
+                  <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
+                </div>
+              </div>
+            `;
+            adminChatBox.scrollTop = adminChatBox.scrollHeight;
+          }
+        }
+      }
+    }
+
+    // Deteksi pesan chat baru dari admin untuk pembeli
+    if (chatMessages.length > 0 && data.chatMessages && data.chatMessages.length > chatMessages.length && !isAdmin && currentBuyer) {
+      const latestMsg = data.chatMessages[data.chatMessages.length - 1];
+      if (latestMsg && latestMsg.sender === 'admin' && latestMsg.buyerEmail === currentBuyer.email) {
+        playNotificationSound();
+        
+        // --- TAMBAHAN: Update kotak chat pembeli secara instan tanpa render ulang halaman ---
+        if (view === 'chat') {
+          const buyerChatBox = document.getElementById('chatBoxBuyer');
+          if (buyerChatBox) {
+            if (buyerChatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+              buyerChatBox.innerHTML = '';
+            }
+            buyerChatBox.innerHTML += `
+              <div class="flex flex-col items-start">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                  <p>${latestMsg.text}</p>
+                  <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
+                </div>
+              </div>
+            `;
+            buyerChatBox.scrollTop = buyerChatBox.scrollHeight;
+          }
+        }
       }
     }
 
     applyDataToState(data);
     
-    // Mencegah gangguan fokus saat mengetik chat
+    // Mencegah gangguan fokus saat admin/pembeli sedang mengetik chat
     if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) {
       return;
     }
