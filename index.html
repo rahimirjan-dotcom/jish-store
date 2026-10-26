@@ -836,17 +836,36 @@ function closeReviewModal() {
 
 function submitProductReview() {
   const productId = Number(document.getElementById('reviewProductId').value);
+  const orderId = Number(document.getElementById('reviewOrderId').value);
   const rating = Number(document.getElementById('reviewRating').value);
   const comment = document.getElementById('reviewComment').value.trim();
+  
   if (!comment) return showToast('Tuliskan komentar ulasan Anda!');
+
+  // 1. Cek apakah pembeli sudah pernah memberikan ulasan untuk produk & order ID ini
+  const existingReview = productReviews.find(r => 
+    r.productId === productId && 
+    r.buyerEmail === (currentBuyer ? currentBuyer.email : '') &&
+    r.orderId === orderId
+  );
+
+  if (existingReview) {
+    closeReviewModal();
+    return showToast('Anda sudah memberikan ulasan untuk produk dari pesanan ini!');
+  }
+
+  // 2. Simpan ulasan jika belum pernah mengulas
   productReviews.push({
     id: Date.now(),
     productId: productId,
+    orderId: orderId, // Menyimpan ID pesanan agar terkunci per transaksi
+    buyerEmail: currentBuyer ? currentBuyer.email : '',
     buyerName: currentBuyer ? currentBuyer.name : 'Pelanggan',
     rating: rating,
     comment: comment,
     date: new Date().toLocaleDateString('id-ID')
   });
+
   save();
   closeReviewModal();
   render();
