@@ -1229,21 +1229,63 @@ function blobToBase64(blob) {
 }
 
 function openRestockModal(id) {
-  const p = thirdPartyProducts.find(x => x.id === id);
+  // Cek apakah produk ada di thirdPartyProducts atau products utama
+  const p = thirdPartyProducts.find(x => x.id === id) || products.find(x => x.id === id);
   if (!p) return;
-  const addQty = prompt(`Tambah stok untuk barang "${p.name}":\nMasukkan jumlah tambahan stok:`, "10");
-  if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
-    const qtyNum = Number(addQty);
-    p.stock += qtyNum;
-    stockRestockLogs.unshift({
-      id: Date.now(),
-      productName: p.name,
-      qtyAdded: qtyNum,
-      date: new Date().toLocaleString('id-ID')
-    });
-    save();
-    render();
-    showToast(`Berhasil menambah ${qtyNum} stok untuk ${p.name}!`);
+
+  // Jika produk memiliki variasi warna & ukuran
+  if (p.hasVariations && p.colors && p.colors.length > 0) {
+    // Buat daftar pilihan warna untuk prompt atau kita buatkan prompt bertingkat
+    let colorOptionsText = p.colors.map((c, idx) => `${idx + 1}. ${c.name}`).join('\n');
+    let colorChoice = prompt(`📦 RESTOK PRODUK BERVARIASI: "${p.name}"\n\nPilih nomor warna yang ingin ditambahkan stoknya:\n${colorOptionsText}\n\nMasukkan nomor pilihan (1-${p.colors.length}):`, "1");
+    
+    if (!colorChoice) return;
+    let cIdx = Number(colorChoice) - 1;
+    if (isNaN(cIdx) || !p.colors[cIdx]) return alert('Pilihan warna tidak valid!');
+
+    const selectedColor = p.colors[cIdx];
+    let sizeOptionsText = selectedColor.sizes.map((s, idx) => `${idx + 1}. Ukuran ${s.size} (Stok saat ini: ${s.stock})`).join('\n');
+    let sizeChoice = prompt(`Pilih nomor ukuran untuk warna "${selectedColor.name}":\n${sizeOptionsText}\n\nMasukkan nomor pilihan (1-${selectedColor.sizes.length}):`, "1");
+
+    if (!sizeChoice) return;
+    let sIdx = Number(sizeChoice) - 1;
+    if (isNaN(sIdx) || !selectedColor.sizes[sIdx]) return alert('Pilihan ukuran tidak valid!');
+
+    const selectedSizeObj = selectedColor.sizes[sIdx];
+    let addQty = prompt(`Masukkan jumlah tambahan stok untuk ${p.name} (${selectedColor.name} - Ukuran ${selectedSizeObj.size}):`, "10");
+
+    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
+      const qtyNum = Number(addQty);
+      selectedSizeObj.stock = (Number(selectedSizeObj.stock) || 0) + qtyNum;
+      
+      // Catat ke log restock
+      stockRestockLogs.unshift({
+        id: Date.now(),
+        productName: `${p.name} (${selectedColor.name} - Uk. ${selectedSizeObj.size})`,
+        qtyAdded: qtyNum,
+        date: new Date().toLocaleString('id-ID')
+      });
+
+      save();
+      render();
+      showToast(`Berhasil menambah ${qtyNum} stok untuk ${selectedColor.name} (${selectedSizeObj.size})!`);
+    }
+  } else {
+    // Untuk produk standar tanpa variasi (seperti sebelumnya)
+    const addQty = prompt(`Tambah stok untuk barang "${p.name}":\nMasukkan jumlah tambahan stok:`, "10");
+    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
+      const qtyNum = Number(addQty);
+      p.stock += qtyNum;
+      stockRestockLogs.unshift({
+        id: Date.now(),
+        productName: p.name,
+        qtyAdded: qtyNum,
+        date: new Date().toLocaleString('id-ID')
+      });
+      save();
+      render();
+      showToast(`Berhasil menambah ${qtyNum} stok untuk ${p.name}!`);
+    }
   }
 }
 
@@ -1467,7 +1509,6 @@ function executeShippingWaConfirmation() {
       if (cr) o.courier = cr;
     }
   }
-  o.status = 'Dalam Pengiriman';
   save();
   const cleanBuyerPhone = o.buyerPhone ? o.buyerPhone.replace(/[^0-9]/g, '') : '';
   const cleanCourierPhone = o.courier ? o.courier.phone.replace(/[^0-9]/g, '') : '';
