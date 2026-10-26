@@ -905,6 +905,7 @@ function submitProductReview() {
   showToast('Terima kasih! Ulasan berhasil dikirim.');
 }
 
+// --- OPTIMASI CHAT (100% RESPONSIF & INSTAN) ---
 function chatBuyer() {
   const buyerEmail = currentBuyer ? currentBuyer.email : '';
   const myChats = chatMessages.filter(c => c.buyerEmail === buyerEmail);
@@ -915,19 +916,37 @@ function sendBuyerChat() {
   const input = document.getElementById('buyerChatInput');
   const txt = input ? input.value.trim() : '';
   if (!txt || !currentBuyer) return;
-  chatMessages.push({
+  
+  const newMsg = {
     id: Date.now(),
     buyerEmail: currentBuyer.email,
     sender: 'buyer',
     text: txt,
     time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-  });
-  save();
-  render();
-  setTimeout(() => {
-    const chatBox = document.getElementById('chatBoxBuyer');
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-  }, 100);
+  };
+  
+  chatMessages.push(newMsg);
+  
+  // Render langsung container chat secara lokal tanpa mereset seluruh halaman agar input tidak kehilangan fokus
+  const chatBox = document.getElementById('chatBoxBuyer');
+  if (chatBox) {
+    if (chatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+      chatBox.innerHTML = '';
+    }
+    chatBox.innerHTML += `
+      <div class="flex flex-col items-end">
+        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#cbb6e2] text-white rounded-br-none">
+          <p>${newMsg.text}</p>
+          <span class="text-[9px] opacity-75 mt-1 block text-right">${newMsg.time}</span>
+        </div>
+      </div>
+    `;
+    input.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+    input.focus();
+  }
+  
+  save(); // Sinkronisasi latar belakang ke IndexedDB & Firebase
 }
 
 // --- FUNGSI EKSPOR LAPORAN KEUANGAN KE CSV ---
@@ -1521,19 +1540,37 @@ function sendAdminChat() {
   const input = document.getElementById('adminChatInput');
   const txt = input ? input.value.trim() : '';
   if (!txt || !selectedAdminChatEmail) return;
-  chatMessages.push({
+  
+  const newMsg = {
     id: Date.now(),
     buyerEmail: selectedAdminChatEmail,
     sender: 'admin',
     text: txt,
     time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-  });
+  };
+  
+  chatMessages.push(newMsg);
+  
+  // Render langsung container chat admin secara lokal tanpa mereset total halaman
+  const chatBox = document.getElementById('adminChatBox');
+  if (chatBox) {
+    if (chatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+      chatBox.innerHTML = '';
+    }
+    chatBox.innerHTML += `
+      <div class="flex flex-col items-end">
+        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-black text-white rounded-br-none">
+          <p>${newMsg.text}</p>
+          <span class="text-[9px] opacity-75 mt-1 block text-right">${newMsg.time}</span>
+        </div>
+      </div>
+    `;
+    input.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+    input.focus();
+  }
+  
   save();
-  render();
-  setTimeout(() => {
-    const chatBox = document.getElementById('adminChatBox');
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-  }, 100);
 }
 
 function deleteBuyer(email) {
@@ -1934,7 +1971,7 @@ getFromIndexedDB('full_app_state').then(localData => {
   }
 });
 
-// Listener Firebase Real-time Database
+// Listener Firebase Real-time Database dengan Proteksi Anti-Lag saat di menu Chat
 onValue(ref(db, 'app_data'), (snapshot) => {
   const data = snapshot.val();
   if (data) {
@@ -1950,8 +1987,18 @@ onValue(ref(db, 'app_data'), (snapshot) => {
       }
     }
 
+    const hasIncomingChatUpdate = data.chatMessages && data.chatMessages.length !== chatMessages.length;
     applyDataToState(data);
     saveToIndexedDB('full_app_state', data);
+    
+    // Jangan lakukan render ulang total halaman jika pengguna sedang berada di menu chat aktif (mencegah lag pengetikan)
+    if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) {
+      return;
+    }
+    if (isAdmin && adminTab === 'buyers' && document.getElementById('adminChatInput') === document.activeElement) {
+      return;
+    }
+
     if (typeof render === 'function') {
       render();
     }
