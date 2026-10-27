@@ -179,6 +179,39 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
 </div>
 
 <script>
+// --- FUNGSI KOMPRESI & RESIZE GAMBAR OTOMATIS (MENCEGAH DATABASE BENGKAK) ---
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // --- KONFIGURASI TOKO & AKUN ADMIN ---
 let adminAccount = {
   email: "admin@toko.com",
@@ -253,47 +286,6 @@ let financeDateFilter = 'all';
 let currentBannerIndex = 0;
 let bannerInterval = null;
 
-// --- FUNGSI KOMPRESI & RESIZE GAMBAR OTOMATIS (MENGURANGI UKURAN BASE64) ---
-function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
-  return new Promise((resolve) => {
-    if (!file || !file.type.startsWith('image/')) {
-      resolve(null);
-      return;
-    }
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width > height) {
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        // Ubah ke format JPEG dengan kualitas terkompresi
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
-      };
-      img.onerror = () => resolve(event.target.result); // Fallback jika gagal
-    };
-    reader.onerror = () => resolve(null);
-  });
-}
-
 // --- WEB AUDIO API ---
 function playNotificationSound() {
   try {
@@ -314,7 +306,7 @@ function playNotificationSound() {
   }
 }
 
-// --- FUNGSI SIMPAN KE FIREBASE REALTIME DATABASE ---
+// --- FUNGSI SIMPAN LANGSUNG KE FIREBASE ---
 const save = () => {
   const appDataPayload = {
     products,
@@ -365,13 +357,12 @@ function render() {
           <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
           <p class="text-xs font-semibold text-red-500">⚠️ Perangkat Anda tidak terhubung ke internet.</p>
-          <p class="text-[11px] text-zinc-400">Menunggu sambungan jaringan...</p>
+          <p class="text-[11px] text-zinc-400">Menunggu sambungan jaringan untuk memuat data terbaru...</p>
         </div>
       </div>
     `;
     return;
   }
-
   if (!isInitialDataLoaded) {
     if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
     app.innerHTML = `
@@ -392,15 +383,12 @@ function render() {
   else if (view === 'login') app.innerHTML = login();
   else if (view === 'register') app.innerHTML = register();
   else if (view === 'loginAdmin') app.innerHTML = loginAdmin();
-  else if (view === 'shop') {
-    app.innerHTML = shop();
-    startBannerSlider('activeBannerImg');
-  } else if (view === 'admin') {
+  else if (view === 'shop') { app.innerHTML = shop(); startBannerSlider('activeBannerImg'); }
+  else if (view === 'admin') {
     app.innerHTML = isAdmin ? admin() : loginAdmin();
-    if (adminTab === 'settings') {
-      startBannerSlider('adminPreviewBannerImg');
-    }
-  } else if (view === 'history') app.innerHTML = currentBuyer ? history() : gate();
+    if (adminTab === 'settings') { startBannerSlider('adminPreviewBannerImg'); }
+  }
+  else if (view === 'history') app.innerHTML = currentBuyer ? history() : gate();
   else if (view === 'chat') app.innerHTML = currentBuyer ? chatBuyer() : gate();
   else app.innerHTML = gate();
 }
@@ -526,7 +514,9 @@ function doReg() {
 function doLogin() {
   const input = document.getElementById('le').value.trim();
   const p = document.getElementById('lp').value;
-  if (!navigator.onLine) return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  if (!navigator.onLine) {
+    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  }
   const cleanInput = input.replace(/[^0-9]/g, '');
   const f = buyers.find(b => (b.email === input || (b.phone && b.phone === cleanInput)) && b.pass === p);
   if (!f) return showToast('Email/WA atau password salah!');
@@ -540,7 +530,9 @@ function doLogin() {
 function doLoginAdmin() {
   const e = document.getElementById('ae').value;
   const p = document.getElementById('ap').value;
-  if (!navigator.onLine) return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  if (!navigator.onLine) {
+    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  }
   if (adminAccount && e === adminAccount.email && p === adminAccount.pass) {
     sessionStorage.setItem('ssr_ad', '1');
     isAdmin = true;
@@ -734,7 +726,7 @@ function shop() {
               <div class="bg-[#faf6f3] rounded-[1.3rem] p-3 sm:p-4 flex flex-col justify-between hover:shadow-md transition-shadow">
                 <div>
                   <div class="relative cursor-pointer group overflow-hidden rounded-xl" onclick="handleProductClick(${p.id})">
-                    <img src="${p.image}" loading="lazy" class="w-full h-36 sm:h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105">
+                    <img src="${p.image}" class="w-full h-36 sm:h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105">
                     <div class="absolute top-2 right-2 flex flex-col items-end gap-1">
                       <span class="bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold shadow-sm">
                         Rp ${(p.price/1000).toFixed(0)}k
@@ -1190,6 +1182,7 @@ function checkout() {
   const selectedDelivery = deliverySettings.selectedMethod;
   deliverySettings.selectedMethod = "";
   save();
+
   const waText = `Halo Admin ${siteSettings.storeName},\n\nSaya *${currentBuyer.name}*\n📱 No. WA: ${currentBuyer.phone || '-'}\n📍 Alamat Lengkap: ${currentBuyer.address || '-'}\n\nIngin memesan:\n-------------------------------------\n- ${txt.join('\n- ')}\n-------------------------------------\n📌 *Opsi Penyerahan:* ${selectedDelivery}\n💵 *Subtotal Barang:* Rp ${subtotal.toLocaleString('id-ID')}\n🚚 *Biaya Pengiriman Normal:* Rp ${rawShippingFee.toLocaleString('id-ID')}\n🎁 *Potongan Ongkir:* ${shippingDiscount > 0 ? '-Rp ' + shippingDiscount.toLocaleString('id-ID') : 'Rp 0'}\n${voucherDisc > 0 ? `🎟️ *Voucher Diskon (${orderData.voucherCode}):* -Rp ${voucherDisc.toLocaleString('id-ID')}\n` : ''}💰 *TOTAL PEMBAYARAN:* Rp ${grandTotal.toLocaleString('id-ID')}\n-------------------------------------\nMohon diproses, terima kasih!`;
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waText)}`, '_blank');
   view = 'history';
@@ -1230,23 +1223,19 @@ function history() {
               ${o.status !== 'Dibatalkan' ? `
                 <div class="flex items-center justify-between px-2 py-3 bg-[#faf6f3] rounded-xl text-[10px] font-bold">
                   <div class="flex flex-col items-center ${currentStepIdx >= 0 ? 'text-purple-700' : 'text-zinc-400'}">
-                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 0 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">1</span>
-                    Diproses
+                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 0 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">1</span> Diproses
                   </div>
                   <div class="flex-1 h-0.5 mx-1 ${currentStepIdx >= 1 ? 'bg-purple-600' : 'bg-zinc-200'}"></div>
                   <div class="flex flex-col items-center ${currentStepIdx >= 1 ? 'text-purple-700' : 'text-zinc-400'}">
-                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 1 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">2</span>
-                    Dikemas
+                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 1 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">2</span> Dikemas
                   </div>
                   <div class="flex-1 h-0.5 mx-1 ${currentStepIdx >= 2 ? 'bg-purple-600' : 'bg-zinc-200'}"></div>
                   <div class="flex flex-col items-center ${currentStepIdx >= 2 ? 'text-purple-700' : 'text-zinc-400'}">
-                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 2 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">3</span>
-                    Pengiriman
+                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 2 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">3</span> Pengiriman
                   </div>
                   <div class="flex-1 h-0.5 mx-1 ${currentStepIdx >= 3 ? 'bg-emerald-600' : 'bg-zinc-200'}"></div>
                   <div class="flex flex-col items-center ${currentStepIdx >= 3 ? 'text-emerald-700' : 'text-zinc-400'}">
-                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 3 ? 'bg-emerald-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">4</span>
-                    Selesai
+                    <span class="w-6 h-6 rounded-full ${currentStepIdx >= 3 ? 'bg-emerald-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">4</span> Selesai
                   </div>
                 </div>
               ` : ''}
@@ -1348,6 +1337,7 @@ function submitProductReview() {
   showToast('Terima kasih! Ulasan berhasil dikirim.');
 }
 
+// --- CHAT PEMBELI ---
 function chatBuyer() {
   const buyerEmail = currentBuyer ? currentBuyer.email : '';
   const myChats = chatMessages.filter(c => c.buyerEmail === buyerEmail);
@@ -1417,23 +1407,33 @@ function sendBuyerChat() {
   save();
 }
 
+// --- EKSPOR LAPORAN KEUANGAN KE CSV ---
 function exportFinanceCSV() {
   const now = new Date();
   const filteredOrders = orders.filter(o => {
     if (o.status !== 'Selesai') return false;
     if (financeDateFilter === 'all') return true;
     const oDate = o.rawDate ? new Date(o.rawDate) : new Date();
-    if (financeDateFilter === 'today') return oDate.toDateString() === now.toDateString();
-    if (financeDateFilter === 'month') return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear();
+    if (financeDateFilter === 'today') {
+      return oDate.toDateString() === now.toDateString();
+    }
+    if (financeDateFilter === 'month') {
+      return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear();
+    }
     return true;
   });
   const filteredExpenses = operationalExpenses.filter(exp => {
     if (financeDateFilter === 'all') return true;
     const expDate = exp.date ? new Date(exp.date.split('/').reverse().join('-')) : new Date();
-    if (financeDateFilter === 'today') return expDate.toDateString() === now.toDateString();
-    if (financeDateFilter === 'month') return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+    if (financeDateFilter === 'today') {
+      return expDate.toDateString() === now.toDateString();
+    }
+    if (financeDateFilter === 'month') {
+      return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+    }
     return true;
   });
+
   let csvContent = "\uFEFF";
   csvContent += "=== LAPORAN KEUANGAN JISH STORE ===\n";
   csvContent += `Periode Filter:,${financeDateFilter.toUpperCase()}\n`;
@@ -1446,7 +1446,9 @@ function exportFinanceCSV() {
     totalOmset += o.total;
     let orderModal = 0;
     if (o.items) {
-      o.items.forEach(it => { orderModal += (it.costPrice || it.price) * it.qty; });
+      o.items.forEach(it => {
+        orderModal += (it.costPrice || it.price) * it.qty;
+      });
     }
     totalModal += orderModal;
     csvContent += `"#${o.id}","${o.date}","${o.buyerName}","${o.deliveryMethod}",${o.subtotal},${o.shippingFee},${o.voucherDiscount || 0},${o.total}\n`;
@@ -1475,6 +1477,7 @@ function exportFinanceCSV() {
   showToast('Laporan Keuangan berhasil diunduh ke CSV!');
 }
 
+// --- VIEW: ADMIN DASHBOARD ---
 function admin() {
   return `
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
@@ -1488,7 +1491,7 @@ function admin() {
         </div>
         <div class="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0">
           <span class="bg-emerald-50 text-emerald-600 text-xs px-3 py-1.5 rounded-full font-semibold border border-emerald-100 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online (Auto-Compressed Base64 & Realtime)
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online (Firebase Realtime)
           </span>
         </div>
       </header>
@@ -1531,9 +1534,9 @@ function admin() {
             <div class="flex justify-between items-center mb-5 pb-3 border-b border-zinc-100">
               <div>
                 <h3 class="font-bold text-base text-zinc-900">${editTpId ? '✏️ Edit Barang Toko Lain' : '🏪 Tambah Barang Toko Lain'}</h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Atur harga beli, harga jual, dan variasi produk.</p>
+                <p class="text-xs text-zinc-400 mt-0.5">Atur harga beli dari penjual, harga jual, harga coret promo, serta variasi.</p>
               </div>
-              ${editTpId ? `<span class="bg-amber-50 text-amber-600 text-[11px] px-3 py-1 rounded-full font-bold border border-amber-200">Mode Edit</span>` : ''}
+              ${editTpId ? `<span class="bg-amber-50 text-amber-600 text-[11px] px-3 py-1 rounded-full font-bold border border-amber-200">Mode Edit Toko Lain</span>` : ''}
             </div>
             <div class="grid gap-4">
               <div class="p-4 bg-purple-50/60 rounded-2xl border border-purple-100/80 space-y-3">
@@ -1549,7 +1552,7 @@ function admin() {
                   </div>
                   <div>
                     <label class="text-[11px] font-bold text-zinc-700 block mb-1">Alamat Lengkap Toko *</label>
-                    <input id="tp_storeAddress" placeholder="Contoh: Matakali, Polewali Mandar" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
+                    <input id="tp_storeAddress" placeholder="Contoh: Rea Barat Jl. Bunga-Bunga, Matakali, Polewali Mandar" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none focus:border-black">
                   </div>
                 </div>
               </div>
@@ -1582,15 +1585,15 @@ function admin() {
                 </div>
               </div>
               <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/60">
-                <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Sampul Utama Barang (Auto-Compressed)</label>
-                <input type="file" id="tp_file" accept="image/*" onchange="previewTpImage(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
+                <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Sampul Utama Barang</label>
+                <input type="file" id="tp_file" accept="image/*" onchange="previewAndCompressTpMainImage(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
                 <img id="tp_preview" class="w-24 h-24 rounded-2xl hidden object-cover mt-3 border border-zinc-200 shadow-sm">
               </div>
               <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
                 <div class="flex justify-between items-center">
                   <div>
                     <span class="font-bold text-xs text-purple-950 block">🎨 Variasi Warna & Ukuran Stok</span>
-                    <p class="text-[11px] text-purple-800">Aktifkan untuk memberikan pilihan warna dan ukuran.</p>
+                    <p class="text-[11px] text-purple-800">Aktifkan untuk memberikan pilihan warna dan ukuran dari toko supplier.</p>
                   </div>
                   <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-purple-900">
                     <input type="checkbox" id="tpHasVariations" onchange="toggleVariationSection(this.checked, 'tp')" class="w-4 h-4 rounded accent-purple-800"> Aktifkan Variasi
@@ -1599,7 +1602,7 @@ function admin() {
                 <div id="tpVariationContainer" class="hidden mt-3 pt-3 border-t border-purple-200 space-y-4">
                   <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-zinc-800">Daftar Pilihan Warna:</span>
-                    <button onclick="addColorVariation('tp')" class="bg-purple-800 hover:bg-purple-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors">+ Tambah Warna</button>
+                    <button onclick="addColorVariation('tp')" class="bg-purple-800 hover:bg-purple-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors"> + Tambah Warna </button>
                   </div>
                   <div id="tpColorList" class="space-y-3"></div>
                 </div>
@@ -1607,7 +1610,7 @@ function admin() {
             </div>
             <div class="flex gap-2 mt-5 pt-3 border-t border-zinc-100">
               <button onclick="saveTpProduct()" class="bg-black hover:bg-zinc-800 text-white px-6 py-3 rounded-2xl text-xs font-bold transition-all shadow-md active:scale-98">
-                ${editTpId ? '💾 Simpan Perubahan Barang' : '➕ Simpan Barang Toko Lain'}
+                ${editTpId ? '💾 Simpan Perubahan Barang Toko Lain' : '➕ Simpan Barang Toko Lain'}
               </button>
               ${editTpId ? `<button onclick="resetTpForm()" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-5 py-3 rounded-2xl text-xs font-bold transition-colors">Batal Edit</button>` : ''}
             </div>
@@ -1617,7 +1620,7 @@ function admin() {
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h3 class="font-bold text-base text-zinc-900">Daftar Barang Toko Lain / Supplier (${thirdPartyProducts.length})</h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Dikelompokkan berdasarkan nama toko supplier.</p>
+                <p class="text-xs text-zinc-400 mt-0.5">Barang dikelompokkan secara otomatis berdasarkan nama toko supplier.</p>
               </div>
               <div class="relative w-full sm:w-64">
                 <input id="tpSearchInput" type="text" value="${searchTpStoreQuery}" oninput="searchTpStoreQuery=this.value;render();focusTpSearch()" placeholder="🔍 Cari nama toko supplier..." class="w-full bg-[#faf6f3] border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500 transition-colors">
@@ -1628,12 +1631,12 @@ function admin() {
               ${(() => {
                 if (thirdPartyProducts.length === 0) return '<p class="text-xs text-center text-zinc-400 py-6">Belum ada barang toko lain yang ditambahkan.</p>';
                 const filteredThirdParty = thirdPartyProducts.filter(p => {
-                  const sName = p.storeName || 'Toko Pihak Ke-3';
+                  const sName = p.storeName || 'Toko Pihak Ke-3 (Tanpa Nama)';
                   return sName.toLowerCase().includes(searchTpStoreQuery.toLowerCase());
                 });
                 if (filteredThirdParty.length === 0) return `<p class="text-xs text-center text-zinc-400 py-8">Toko supplier dengan nama "<b>${searchTpStoreQuery}</b>" tidak ditemukan.</p>`;
                 const grouped = filteredThirdParty.reduce((acc, curr) => {
-                  const sName = curr.storeName || 'Toko Pihak Ke-3';
+                  const sName = curr.storeName || 'Toko Pihak Ke-3 (Tanpa Nama)';
                   if (!acc[sName]) {
                     acc[sName] = { info: { storeName: sName, storePhone: curr.storePhone || '-', storeAddress: curr.storeAddress || '-' }, items: [] };
                   }
@@ -1653,52 +1656,57 @@ function admin() {
                           <div class="flex items-center gap-2">
                             <span class="text-base">🏪</span>
                             <h4 class="font-bold text-sm text-purple-950">${group.info.storeName}</h4>
-                            <span class="bg-purple-200 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${group.items.length} Barang</span>
+                            <span class="bg-purple-200 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${group.items.length} Barang Total</span>
                           </div>
-                          <p class="text-[11px] text-purple-800 mt-1">📍 ${group.info.storeAddress} • 📞 <a href="https://wa.me/${group.info.storePhone.replace(/[^0-9]/g, '')}" target="_blank" class="underline font-bold">${group.info.storePhone}</a></p>
+                          <p class="text-[11px] text-purple-800 mt-1">
+                            📍 ${group.info.storeAddress} • 📞 <a href="https://wa.me/${group.info.storePhone.replace(/[^0-9]/g, '')}" target="_blank" class="underline font-bold">${group.info.storePhone}</a>
+                          </p>
                         </div>
                         <button onclick="addTpProductToStore('${group.info.storeName.replace(/'/g, "\\'")}', '${group.info.storePhone.replace(/'/g, "\\'")}', '${group.info.storeAddress.replace(/'/g, "\\'")}')" class="bg-purple-900 hover:bg-purple-950 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 self-start sm:self-center active:scale-95">
                           <span>➕</span> <span>Tambah Barang ke Toko Ini</span>
                         </button>
                       </div>
                       <div class="p-3 bg-purple-50/50 border-b border-purple-200/50 flex justify-between items-center">
-                        <span class="text-[11px] font-bold text-purple-900">🔍 Filter Barang:</span>
+                        <span class="text-[11px] font-bold text-purple-900">🔍 Filter Barang Toko Ini:</span>
                         <div class="relative w-48 sm:w-56">
-                          <input id="tpItemSearch_${encodeURIComponent(storeKey)}" type="text" value="${searchTpItemQueries[storeKey] || ''}" oninput="updateTpItemSearch('${storeKey.replace(/'/g, "\\'")}', this.value)" placeholder="Cari barang..." class="w-full bg-white border border-purple-200 pl-7 pr-6 py-1 rounded-lg text-[11px] outline-none focus:border-purple-600">
+                          <input id="tpItemSearch_${encodeURIComponent(storeKey)}" type="text" value="${searchTpItemQueries[storeKey] || ''}" oninput="updateTpItemSearch('${storeKey.replace(/'/g, "\\'")}', this.value)" placeholder="Cari barang di ${group.info.storeName}..." class="w-full bg-white border border-purple-200 pl-7 pr-6 py-1 rounded-lg text-[11px] outline-none focus:border-purple-600">
                           <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400">🏷️</span>
                           ${searchTpItemQueries[storeKey] ? `<button onclick="updateTpItemSearch('${storeKey.replace(/'/g, "\\'")}', '')" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
                         </div>
                       </div>
                       <div class="p-3 divide-y divide-zinc-200/60 space-y-3">
-                        ${storeItemsFiltered.length === 0 ? `<p class="text-xs text-center text-zinc-400 py-4">Barang tidak ditemukan.</p>` : storeItemsFiltered.map(p => {
-                          const profit = p.price - (p.costPrice || p.price);
-                          let totalStockDisplay = p.stock;
-                          if (p.hasVariations && p.colors) {
-                            totalStockDisplay = p.colors.reduce((tot, c) => tot + c.sizes.reduce((szTot, sz) => szTot + (Number(sz.stock)||0), 0), 0);
-                          }
-                          return `
-                            <div class="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div class="flex items-center gap-3.5">
-                                <img src="${p.image}" class="w-14 h-14 rounded-xl object-cover border border-zinc-200 flex-shrink-0">
-                                <div>
-                                  <h5 class="text-xs font-bold text-zinc-900">${p.name}</h5>
-                                  <p class="text-[11px] text-zinc-500 mt-0.5">Kategori: <span class="font-medium text-zinc-700">${p.cat}</span> • Stok: <b>${totalStockDisplay}</b></p>
-                                  <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px]">
-                                    <span class="text-zinc-700 bg-white px-2 py-0.5 rounded-md border border-zinc-200">Jual: <b>Rp ${p.price.toLocaleString('id-ID')}</b></span>
-                                    ${p.oldPrice ? `<span class="text-zinc-400 line-through">~Rp ${p.oldPrice.toLocaleString('id-ID')}~</span>` : ''}
-                                    <span class="text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">Modal: <b>Rp ${(p.costPrice || p.price).toLocaleString('id-ID')}</b></span>
-                                    <span class="text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-bold">Untung: +Rp ${profit.toLocaleString('id-ID')}</span>
+                        ${(() => {
+                          if (storeItemsFiltered.length === 0) return `<p class="text-xs text-center text-zinc-400 py-4">Barang dengan kata kunci "<b>${searchTpItemQueries[storeKey]}</b>" tidak ditemukan di toko ini.</p>`;
+                          return storeItemsFiltered.map(p => {
+                            const profit = p.price - (p.costPrice || p.price);
+                            let totalStockDisplay = p.stock;
+                            if (p.hasVariations && p.colors) {
+                              totalStockDisplay = p.colors.reduce((tot, c) => tot + c.sizes.reduce((szTot, sz) => szTot + (Number(sz.stock)||0), 0), 0);
+                            }
+                            return `
+                              <div class="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3.5">
+                                  <img src="${p.image}" class="w-14 h-14 rounded-xl object-cover border border-zinc-200 flex-shrink-0">
+                                  <div>
+                                    <h5 class="text-xs font-bold text-zinc-900">${p.name}</h5>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">Kategori: <span class="font-medium text-zinc-700">${p.cat}</span> • Stok: <b>${totalStockDisplay}</b></p>
+                                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px]">
+                                      <span class="text-zinc-700 bg-white px-2 py-0.5 rounded-md border border-zinc-200">Harga Jual: <b>Rp ${p.price.toLocaleString('id-ID')}</b></span>
+                                      ${p.oldPrice ? `<span class="text-zinc-400 line-through">~Rp ${p.oldPrice.toLocaleString('id-ID')}~</span>` : ''}
+                                      <span class="text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">Modal: <b>Rp ${(p.costPrice || p.price).toLocaleString('id-ID')}</b></span>
+                                      <span class="text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-bold">Untung: +Rp ${profit.toLocaleString('id-ID')}</span>
+                                    </div>
                                   </div>
                                 </div>
+                                <div class="flex items-center gap-1.5 self-end sm:self-center">
+                                  <button onclick="openRestockModal(${p.id})" class="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl border border-purple-200 font-bold text-xs transition-colors" title="Restock">📦 Restock</button>
+                                  <button onclick="editTpProduct(${p.id})" class="p-2 bg-white text-[#a48bc1] hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Edit">✏️ Edit</button>
+                                  <button onclick="deleteTpProduct(${p.id})" class="p-2 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Hapus">🗑️</button>
+                                </div>
                               </div>
-                              <div class="flex items-center gap-1.5 self-end sm:self-center">
-                                <button onclick="openRestockModal(${p.id})" class="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl border border-purple-200 font-bold text-xs transition-colors">📦 Restock</button>
-                                <button onclick="editTpProduct(${p.id})" class="p-2 bg-white text-[#a48bc1] hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors">✏️ Edit</button>
-                                <button onclick="deleteTpProduct(${p.id})" class="p-2 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors">🗑️</button>
-                              </div>
-                            </div>
-                          `;
-                        }).join('')}
+                            `;
+                          }).join('');
+                        })()}
                       </div>
                     </div>
                   `;
@@ -1740,10 +1748,13 @@ function admin() {
                       </div>
                       <div class="mt-2 flex justify-between items-center pt-2 border-t border-zinc-200/50">
                         <span class="text-[10px] text-zinc-500">📱 ${b.phone}</span>
-                        ${!hasOrders ? `<button onclick="deleteBuyer('${b.email}')" class="text-[10px] text-red-500 font-bold bg-white px-2 py-0.5 rounded-lg border border-red-100">Hapus</button>` : ''}
+                        ${hasUnread ? `<span class="text-[10px] font-bold text-red-600">💬 Pesan Baru</span>` : ''}
+                        ${!hasOrders ? `
+                          <button onclick="deleteBuyer('${b.email}')" class="text-[10px] text-red-500 hover:text-red-700 font-bold bg-white px-2 py-0.5 rounded-lg border border-red-100">Hapus</button>
+                        ` : ''}
                       </div>
                     </div>`;
-                }).join('') || '<p class="text-xs text-zinc-400 py-6 text-center">Belum ada pembeli.</p>'}
+                }).join('') || '<p class="text-xs text-zinc-400 py-6 text-center">Belum ada pembeli terdaftar.</p>'}
               </div>
             </div>
           </div>
@@ -1755,7 +1766,7 @@ function admin() {
                 <div>
                   <div class="flex justify-between items-center pb-3 border-b mb-3">
                     <div>
-                      <h3 class="font-bold text-sm text-zinc-900">💬 Chat: ${currentSelectedBuyer?.name || 'Pembeli'}</h3>
+                      <h3 class="font-bold text-sm text-zinc-900">💬 Chat dengan: ${currentSelectedBuyer?.name || 'Pembeli'}</h3>
                       <p class="text-[10px] text-zinc-400">${selectedAdminChatEmail} • ${currentSelectedBuyer?.phone || '-'}</p>
                     </div>
                     <button onclick="selectedAdminChatEmail=null;render()" class="text-xs text-zinc-400 hover:text-zinc-600 font-bold">✕ Tutup</button>
@@ -1768,15 +1779,26 @@ function admin() {
                           <span class="text-[9px] opacity-75 mt-1 block text-right">${m.time}</span>
                         </div>
                       </div>
-                    `).join('') : '<p class="text-xs text-zinc-400 text-center py-12">Belum ada obrolan.</p>'}
+                    `).join('') : `
+                      <div class="h-full flex flex-col items-center justify-center text-zinc-400 py-12">
+                        <span class="text-2xl mb-1">💬</span>
+                        <p class="text-xs">Belum ada riwayat pesan dengan pembeli ini.</p>
+                      </div>
+                    `}
                   </div>
                 </div>
                 <div class="pt-3 border-t flex gap-2">
-                  <input id="adminChatInput" type="text" placeholder="Tulis balasan..." onkeypress="if(event.key==='Enter') sendAdminChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
+                  <input id="adminChatInput" type="text" placeholder="Tulis balasan pesan..." onkeypress="if(event.key==='Enter') sendAdminChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
                   <button onclick="sendAdminChat()" class="bg-black hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95">Kirim</button>
                 </div>
               `;
-            })() : '<div class="h-full grid place-items-center text-xs text-zinc-400">Pilih pembeli untuk mulai chat.</div>'}
+            })() : `
+              <div class="h-full flex flex-col items-center justify-center text-zinc-400 py-12">
+                <span class="text-4xl mb-2">💬</span>
+                <p class="text-xs font-bold text-zinc-600">Pilih pembeli dari daftar di sebelah kiri</p>
+                <p class="text-[11px] text-zinc-400 mt-0.5">Untuk melihat dan membalas obrolan pesan customer service.</p>
+              </div>
+            `}
           </div>
         </div>
       ` : ''}
@@ -1787,78 +1809,139 @@ function admin() {
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-100">
             <div>
               <h3 class="font-bold text-base text-zinc-900">📋 Daftar Pesanan Masuk (${orders.length})</h3>
-              <p class="text-xs text-zinc-400 mt-0.5">Kelola alur status pesanan dan kurir.</p>
+              <p class="text-xs text-zinc-400 mt-0.5">Kelola alur status pesanan, kurir, cetak resi alamat, dan konfirmasi WhatsApp.</p>
             </div>
           </div>
           <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200/80 mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div class="w-full sm:w-72 relative">
-              <input id="orderSearchInput" type="text" value="${orderSearchQuery}" oninput="orderSearchQuery=this.value;render();focusOrderSearch()" placeholder="🔍 Cari pembeli / Order ID..." class="w-full bg-white border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none">
+              <input id="orderSearchInput" type="text" value="${orderSearchQuery}" oninput="orderSearchQuery=this.value;render();focusOrderSearch()" placeholder="🔍 Cari nama pembeli / Order ID..." class="w-full bg-white border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500">
               <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs">🔎</span>
+              ${orderSearchQuery ? `<button onclick="orderSearchQuery='';render()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
             </div>
             <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 no-scrollbar">
               <span class="text-xs font-bold text-zinc-700 whitespace-nowrap">Status:</span>
-              <select onchange="orderStatusFilter=this.value;render()" class="text-xs font-bold p-2 rounded-xl border border-zinc-200 bg-white outline-none">
-                <option value="All">Semua Status</option>
-                <option value="Diproses">⏳ Diproses</option>
-                <option value="Sudah Di-packing">📦 Sudah Di-packing</option>
-                <option value="Dalam Pengiriman">🚚 Dalam Pengiriman</option>
-                <option value="Selesai">✅ Selesai</option>
-                <option value="Dibatalkan">❌ Dibatalkan</option>
+              <select onchange="orderStatusFilter=this.value;render()" class="text-xs font-bold p-2 rounded-xl border border-zinc-200 bg-white outline-none focus:border-purple-600">
+                <option value="All" ${orderStatusFilter==='All'?'selected':''}>Semua Status</option>
+                <option value="Diproses" ${orderStatusFilter==='Diproses'?'selected':''}>⏳ Diproses</option>
+                <option value="Sudah Di-packing" ${orderStatusFilter==='Sudah Di-packing'?'selected':''}>📦 Sudah Di-packing</option>
+                <option value="Dalam Pengiriman" ${orderStatusFilter==='Dalam Pengiriman'?'selected':''}>🚚 Dalam Pengiriman</option>
+                <option value="Selesai" ${orderStatusFilter==='Selesai'?'selected':''}>✅ Selesai</option>
+                <option value="Dibatalkan" ${orderStatusFilter==='Dibatalkan'?'selected':''}>❌ Dibatalkan</option>
               </select>
             </div>
           </div>
-          <div class="space-y-4">
-            ${orders.filter(o => {
-              const matchStatus = (orderStatusFilter === 'All') || (o.status === orderStatusFilter);
-              const q = orderSearchQuery.toLowerCase().trim();
-              const matchQuery = !q || o.buyerName.toLowerCase().includes(q) || String(o.id).includes(q);
-              return matchStatus && matchQuery;
-            }).map(o => {
-              const isExpanded = !!expandedOrders[o.id];
-              const isPickup = o.deliveryMethod === deliverySettings.pickupLabel;
+          ${(() => {
+            const unhandledOrders = orders.filter(o => o.status === 'Diproses');
+            if (unhandledOrders.length > 0) {
               return `
-                <div class="bg-[#faf6f3] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 shadow-sm space-y-3">
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
+                <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl">⚠️</span>
                     <div>
-                      <div class="flex items-center gap-2">
-                        <span class="font-bold text-xs sm:text-sm text-zinc-900">Order ID: #${o.id}</span>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">${o.status}</span>
-                      </div>
-                      <p class="text-[11px] text-zinc-500 mt-0.5">${o.date} • Oleh: <b>${o.buyerName}</b></p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <select onchange="updateOrderStatus(${o.id}, this.value)" class="text-xs font-bold p-2 rounded-xl border border-zinc-200 bg-white outline-none">
-                        <option value="Diproses" ${o.status==='Diproses'?'selected':''}>⏳ Diproses</option>
-                        <option value="Sudah Di-packing" ${o.status==='Sudah Di-packing'?'selected':''}>📦 Dikemas</option>
-                        <option value="Dalam Pengiriman" ${o.status==='Dalam Pengiriman'?'selected':''}>🚚 Pengiriman</option>
-                        <option value="Selesai" ${o.status==='Selesai'?'selected':''}>✅ Selesai</option>
-                        <option value="Dibatalkan" ${o.status==='Dibatalkan'?'selected':''}>❌ Dibatalkan</option>
-                      </select>
-                      <button onclick="toggleOrderDetails(${o.id})" class="p-2 bg-white text-zinc-700 hover:bg-zinc-100 rounded-xl border border-zinc-200 font-bold text-xs">${isExpanded ? '▲ Sembunyikan' : '▼ Detail'}</button>
-                    </div>
-                  </div>
-                  <div>
-                    <p class="text-xs font-bold text-zinc-800">Ringkasan:</p>
-                    <p class="text-xs text-zinc-600 mt-0.5">${o.text}</p>
-                  </div>
-                  ${isExpanded && o.items ? `
-                    <div class="bg-white p-3 rounded-xl border border-zinc-200 space-y-2 text-xs">
-                      ${o.items.map(item => `<div class="flex justify-between"><span>${item.name} (${item.qty}x)</span><span>Rp ${(item.price * item.qty).toLocaleString('id-ID')}</span></div>`).join('')}
-                    </div>
-                  ` : ''}
-                  <div class="flex justify-between items-center pt-2 border-t border-zinc-200/60">
-                    <span class="text-xs font-bold">Total: Rp ${o.total.toLocaleString('id-ID')}</span>
-                    <div class="flex flex-wrap gap-2">
-                      <button onclick="printAddressLabel(${o.id})" class="bg-purple-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold">🏷️ Resi</button>
-                      <button onclick="printOrderReceipt(${o.id})" class="bg-zinc-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold">🖨️ Struk</button>
-                      ${!isPickup ? `<button onclick="openCourierModal(${o.id})" class="bg-purple-950 text-white px-3 py-1.5 rounded-xl text-xs font-bold">🛵 Kurir</button>` : ''}
-                      <button onclick="openShippingWaModal(${o.id})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">💬 WA</button>
-                      <button onclick="deleteOrder(${o.id})" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl text-xs font-bold">🗑️</button>
+                      <h4 class="text-xs font-bold text-amber-900">Pemberitahuan Pesanan Belum Diproses!</h4>
+                      <p class="text-[11px] text-amber-800 mt-0.5">Terdapat <b>${unhandledOrders.length} pesanan</b> yang masih berstatus <span class="font-bold">"Diproses"</span> dan belum ditangani oleh admin.</p>
                     </div>
                   </div>
                 </div>
               `;
-            }).join('') || '<p class="text-xs text-center text-zinc-400 py-10">Tidak ada pesanan.</p>'}
+            }
+            return '';
+          })()}
+          <div class="space-y-4">
+            ${(() => {
+              const filteredOrdersList = orders.filter(o => {
+                const matchStatus = (orderStatusFilter === 'All') || (o.status === orderStatusFilter);
+                const q = orderSearchQuery.toLowerCase().trim();
+                const matchQuery = !q || o.buyerName.toLowerCase().includes(q) || String(o.id).includes(q) || o.text.toLowerCase().includes(q);
+                return matchStatus && matchQuery;
+              });
+              if (filteredOrdersList.length === 0) return '<p class="text-xs text-center text-zinc-400 py-10">Tidak ada pesanan yang sesuai dengan filter atau pencarian.</p>';
+              return filteredOrdersList.map(o => {
+                const isExpanded = !!expandedOrders[o.id];
+                const isPickup = o.deliveryMethod === deliverySettings.pickupLabel;
+                return `
+                  <div class="bg-[#faf6f3] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 shadow-sm space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-xs sm:text-sm text-zinc-900">Order ID: #${o.id}</span>
+                          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            o.status==='Selesai'?'bg-emerald-100 text-emerald-800':
+                            o.status==='Sudah Di-packing'?'bg-blue-100 text-blue-800':
+                            o.status==='Dalam Pengiriman'?'bg-purple-100 text-purple-800':
+                            o.status==='Dibatalkan'?'bg-red-100 text-red-800':
+                            'bg-amber-100 text-amber-800'
+                          }">${o.status}</span>
+                        </div>
+                        <p class="text-[11px] text-zinc-500 mt-0.5">${o.date} • Oleh: <b>${o.buyerName}</b> (${o.buyerEmail})</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <select onchange="updateOrderStatus(${o.id}, this.value)" class="text-xs font-bold p-2 rounded-xl border border-zinc-200 bg-white outline-none focus:border-purple-600">
+                          <option value="Diproses" ${o.status==='Diproses'?'selected':''}>⏳ Diproses</option>
+                          <option value="Sudah Di-packing" ${o.status==='Sudah Di-packing'?'selected':''}>📦 Sudah Di-packing</option>
+                          <option value="Dalam Pengiriman" ${o.status==='Dalam Pengiriman'?'selected':''}>🚚 Dalam Pengiriman</option>
+                          <option value="Selesai" ${o.status==='Selesai'?'selected':''}>✅ Selesai</option>
+                          <option value="Dibatalkan" ${o.status==='Dibatalkan'?'selected':''}>❌ Dibatalkan</option>
+                        </select>
+                        <button onclick="toggleOrderDetails(${o.id})" class="p-2 bg-white text-zinc-700 hover:bg-zinc-100 rounded-xl border border-zinc-200 font-bold text-xs transition-colors">
+                          ${isExpanded ? '▲ Sembunyikan' : '▼ Detail Item'}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-xs font-bold text-zinc-800">Ringkasan Pesanan:</p>
+                      <p class="text-xs text-zinc-600 mt-0.5">${o.text}</p>
+                      <p class="text-xs text-purple-800 font-semibold mt-1">📍 Penyerahan: ${o.deliveryMethod || '-'}</p>
+                    </div>
+                    ${isExpanded && o.items && o.items.length > 0 ? `
+                      <div class="bg-white p-3 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                        <p class="font-bold text-zinc-800 border-b pb-1">Detail Item Rincian Supplier:</p>
+                        ${o.items.map(item => `
+                          <div class="flex justify-between items-start pt-1">
+                            <div>
+                              <p class="font-semibold text-zinc-900">${item.name} (${item.qty}x)</p>
+                              ${item.color || item.size ? `<p class="text-[10px] text-zinc-500">Warna: ${item.color || '-'}, Ukuran: ${item.size || '-'}</p>` : ''}
+                              ${item.isThirdParty ? `
+                                <span class="text-[10px] text-purple-700 font-bold block mt-0.5">🏪 Supplier: ${item.storeName} (${item.storePhone})</span>
+                              ` : '<span class="text-[10px] text-zinc-400 block mt-0.5">📦 Produk Toko Utama</span>'}
+                            </div>
+                            <div class="text-right">
+                              <p class="font-bold text-zinc-800">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</p>
+                              ${item.isThirdParty ? `<p class="text-[10px] text-amber-700 font-semibold">Modal: Rp ${(item.costPrice * item.qty).toLocaleString('id-ID')}</p>` : ''}
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-zinc-200/60">
+                      <div class="text-xs text-zinc-600">
+                        <span>Total Bayar: <b class="text-purple-900">Rp ${o.total.toLocaleString('id-ID')}</b></span>
+                        ${o.courier ? `<span class="ml-3 font-semibold text-purple-950">🛵 Kurir: ${o.courier.name}</span>` : ''}
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <button onclick="printAddressLabel(${o.id})" class="bg-purple-900 hover:bg-purple-950 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                          <span>🏷️</span> Cetak Resi Alamat
+                        </button>
+                        <button onclick="printOrderReceipt(${o.id})" class="bg-zinc-800 hover:bg-black text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                          <span>🖨️</span> Cetak Struk
+                        </button>
+                        ${!isPickup ? `
+                          <button onclick="openCourierModal(${o.id})" class="bg-purple-950 hover:bg-black text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                            <span>🛵</span> ${o.courier ? 'Ganti Kurir' : 'Pilih Kurir'}
+                          </button>
+                        ` : ''}
+                        <button onclick="openShippingWaModal(${o.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1">
+                          <span>💬</span> Konfirmasi WA
+                        </button>
+                        <button onclick="deleteOrder(${o.id})" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
+                          🗑️ Hapus
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            })()}
           </div>
         </div>
       ` : ''}
@@ -1868,16 +1951,18 @@ function admin() {
         <div class="space-y-6">
           <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-              <h3 class="font-bold text-sm text-zinc-900">📊 Filter Laporan Keuangan</h3>
-              <p class="text-xs text-zinc-400">Pilih rentang waktu kalkulasi.</p>
+              <h3 class="font-bold text-sm text-zinc-900">📊 Filter Rentang Waktu Laporan</h3>
+              <p class="text-xs text-zinc-400">Pilih periode untuk melihat kalkulasi keuangan.</p>
             </div>
             <div class="flex flex-wrap gap-2 items-center">
               <div class="flex gap-2">
-                <button onclick="financeDateFilter='all';render()" class="px-4 py-2 rounded-xl text-xs font-bold ${financeDateFilter==='all'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Semua</button>
-                <button onclick="financeDateFilter='today';render()" class="px-4 py-2 rounded-xl text-xs font-bold ${financeDateFilter==='today'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Hari Ini</button>
-                <button onclick="financeDateFilter='month';render()" class="px-4 py-2 rounded-xl text-xs font-bold ${financeDateFilter==='month'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Bulan Ini</button>
+                <button onclick="financeDateFilter='all';render()" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeDateFilter==='all'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Semua Waktu</button>
+                <button onclick="financeDateFilter='today';render()" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeDateFilter==='today'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Hari Ini</button>
+                <button onclick="financeDateFilter='month';render()" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeDateFilter==='month'?'bg-black text-white':'bg-zinc-100 text-zinc-600'}">Bulan Ini</button>
               </div>
-              <button onclick="exportFinanceCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">📥 Unduh CSV</button>
+              <button onclick="exportFinanceCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
+                <span>📥</span> <span>Unduh CSV (Excel)</span>
+              </button>
             </div>
           </div>
           ${(() => {
@@ -1886,60 +1971,182 @@ function admin() {
               if (o.status !== 'Selesai') return false;
               if (financeDateFilter === 'all') return true;
               const oDate = o.rawDate ? new Date(o.rawDate) : new Date();
-              if (financeDateFilter === 'today') return oDate.toDateString() === now.toDateString();
-              if (financeDateFilter === 'month') return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear();
+              if (financeDateFilter === 'today') {
+                return oDate.toDateString() === now.toDateString();
+              }
+              if (financeDateFilter === 'month') {
+                return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear();
+              }
               return true;
             });
-            let totalOmset = 0, totalModal = 0;
+            let totalOmset = 0;
+            let totalModal = 0;
             filteredOrders.forEach(o => {
               totalOmset += o.total;
-              if (o.items) o.items.forEach(it => { totalModal += (it.costPrice || it.price) * it.qty; });
+              if (o.items) {
+                o.items.forEach(it => {
+                  totalModal += (it.costPrice || it.price) * it.qty;
+                });
+              }
             });
             const filteredExpenses = operationalExpenses.filter(exp => {
               if (financeDateFilter === 'all') return true;
               const expDate = exp.date ? new Date(exp.date.split('/').reverse().join('-')) : new Date();
-              if (financeDateFilter === 'today') return expDate.toDateString() === now.toDateString();
-              if (financeDateFilter === 'month') return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+              if (financeDateFilter === 'today') {
+                return expDate.toDateString() === now.toDateString();
+              }
+              if (financeDateFilter === 'month') {
+                return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+              }
               return true;
             });
             let totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
             let netProfit = (totalOmset - totalModal) - totalExpenses;
             return `
               <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm"><span class="text-[10px] font-bold text-zinc-400 uppercase">Omset</span><p class="text-lg font-bold text-zinc-900 mt-1">Rp ${totalOmset.toLocaleString('id-ID')}</p></div>
-                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm"><span class="text-[10px] font-bold text-amber-600 uppercase">Modal</span><p class="text-lg font-bold text-amber-800 mt-1">Rp ${totalModal.toLocaleString('id-ID')}</p></div>
-                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm"><span class="text-[10px] font-bold text-red-600 uppercase">Pengeluaran</span><p class="text-lg font-bold text-red-700 mt-1">Rp ${totalExpenses.toLocaleString('id-ID')}</p></div>
-                <div class="bg-purple-900 text-white p-5 rounded-3xl shadow-md"><span class="text-[10px] font-bold text-purple-300 uppercase">Laba Bersih</span><p class="text-xl font-bold mt-1">Rp ${netProfit.toLocaleString('id-ID')}</p></div>
+                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm">
+                  <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">💰 Total Omset (Selesai)</span>
+                  <p class="text-lg font-bold text-zinc-900 mt-1">Rp ${totalOmset.toLocaleString('id-ID')}</p>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm">
+                  <span class="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">📦 Total Modal Barang</span>
+                  <p class="text-lg font-bold text-amber-800 mt-1">Rp ${totalModal.toLocaleString('id-ID')}</p>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm">
+                  <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider block">💸 Total Pengeluaran Operasional</span>
+                  <p class="text-lg font-bold text-red-700 mt-1">Rp ${totalExpenses.toLocaleString('id-ID')}</p>
+                </div>
+                <div class="bg-purple-900 text-white p-5 rounded-3xl shadow-md">
+                  <span class="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">📈 Laba Bersih (Net Profit)</span>
+                  <p class="text-xl font-bold mt-1">Rp ${netProfit.toLocaleString('id-ID')}</p>
+                </div>
               </div>
             `;
           })()}
-          <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
-            <h3 class="font-bold text-base text-zinc-900">💸 Catat Pengeluaran Operasional</h3>
-            <input id="exp_title" placeholder="Keterangan (Cth: Bensin Kurir)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs outline-none">
-            <input id="exp_amount" type="number" placeholder="Nominal (Rp)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-red-600 outline-none">
-            <button onclick="saveExpense()" class="w-full bg-black text-white py-3 rounded-2xl text-xs font-bold">Simpan Pengeluaran</button>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
+              <div class="border-b pb-3">
+                <h3 class="font-bold text-base text-zinc-900">💸 Catat Pengeluaran Operasional</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Catat biaya operasional toko seperti bensin kurir, packaging, listrik, dll.</p>
+              </div>
+              <input id="exp_title" placeholder="Keterangan Pengeluaran (Cth: Bensin Kurir)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs outline-none">
+              <input id="exp_amount" type="number" placeholder="Nominal Biaya (Rp)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-red-600 outline-none">
+              <button onclick="saveExpense()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-2xl text-xs font-bold shadow-md transition-all">
+                Simpan Pengeluaran
+              </button>
+              <div class="space-y-2 max-h-48 overflow-y-auto no-scrollbar pt-2">
+                ${operationalExpenses.map(exp => `
+                  <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
+                    <div>
+                      <p class="font-bold text-zinc-900">${exp.title}</p>
+                      <span class="text-[10px] text-zinc-400">${exp.date}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="font-bold text-red-600">-Rp ${exp.amount.toLocaleString('id-ID')}</span>
+                      <button onclick="deleteExpense(${exp.id})" class="text-red-400 hover:text-red-600 font-bold">✕</button>
+                    </div>
+                  </div>
+                `).join('') || '<p class="text-xs text-zinc-400 text-center py-2">Belum ada catatan pengeluaran.</p>'}
+              </div>
+            </div>
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
+              <div class="border-b pb-3">
+                <h3 class="font-bold text-base text-zinc-900">📦 Riwayat Restock Barang</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Log otomatis penambahan stok barang dari supplier.</p>
+              </div>
+              <div class="space-y-2 max-h-72 overflow-y-auto no-scrollbar">
+                ${stockRestockLogs.map(log => `
+                  <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
+                    <div>
+                      <p class="font-bold text-zinc-900">${log.productName}</p>
+                      <span class="text-[10px] text-zinc-400">${log.date}</span>
+                    </div>
+                    <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">+${log.qtyAdded} Pcs</span>
+                  </div>
+                `).join('') || '<p class="text-xs text-zinc-400 text-center py-6">Belum ada riwayat restock barang.</p>'}
+              </div>
+            </div>
           </div>
         </div>
       ` : ''}
 
-      <!-- TAB 5: PENGIRIMAN & KURIR -->
+      <!-- TAB 5: MANAJEMEN PENGIRIMAN & KURIR -->
       ${adminTab === 'delivery' ? `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
-            <h3 class="font-bold text-base text-zinc-900">🚚 Pengaturan Pengiriman</h3>
-            <div><label class="text-xs font-bold block mb-1">Label Pengiriman</label><input id="del_label" value="${deliverySettings.deliveryLabel}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-            <div><label class="text-xs font-bold block mb-1">Label Ambil di Toko</label><input id="pickup_label" value="${deliverySettings.pickupLabel}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-            <div><label class="text-xs font-bold block mb-1">Biaya Ongkir Standar (Rp)</label><input id="del_fee" type="number" value="${deliverySettings.deliveryFee}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-            <button onclick="saveDeliverySettings()" class="w-full bg-black text-white py-3 rounded-2xl text-xs font-bold">Simpan</button>
+            <div class="border-b pb-3">
+              <h3 class="font-bold text-base text-zinc-900">🚚 Pengaturan Opsi Pengiriman</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">Kelola tarif pengiriman dan sistem diskon otomatis.</p>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Pengiriman Ke Alamat</label>
+              <input id="del_label" value="${deliverySettings.deliveryLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Ambil Sendiri di Toko</label>
+              <input id="pickup_label" value="${deliverySettings.pickupLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Biaya Pengiriman Standar (Rp)</label>
+              <input id="del_fee" type="number" value="${deliverySettings.deliveryFee}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-purple-900 outline-none focus:border-black">
+            </div>
+            <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
+              <span class="font-bold text-xs text-purple-950 block">🎁 Promo Diskon Biaya Ongkir:</span>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[11px] font-bold text-zinc-700 block mb-1">Min. Item Jumlah Beli</label>
+                  <input id="del_min_qty" type="number" value="${deliverySettings.minQtyForDiscount || 3}" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-black">
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-zinc-700 block mb-1">Jumlah Potongan (Rp)</label>
+                  <input id="del_disc_amt" type="number" value="${deliverySettings.discountAmount || 10000}" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-bold text-emerald-700 outline-none focus:border-black">
+                </div>
+              </div>
+            </div>
+            <button onclick="saveDeliverySettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+              💾 Simpan Pengaturan Pengiriman
+            </button>
           </div>
           <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 space-y-4">
-            <h3 class="font-bold text-base text-zinc-900">🛵 Tambah Kurir (Auto-Compressed)</h3>
-            <input id="c_name" placeholder="Nama Kurir" class="w-full border p-2.5 rounded-xl text-xs">
-            <input id="c_phone" placeholder="No. WhatsApp Kurir" class="w-full border p-2.5 rounded-xl text-xs">
-            <div><label class="text-xs font-bold block mb-1">Foto Kurir</label><input type="file" id="c_file" accept="image/*" class="w-full text-xs"></div>
-            <button onclick="saveCourier()" class="w-full bg-purple-900 text-white py-2.5 rounded-xl text-xs font-bold">Simpan Kurir</button>
-            <div class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
-              ${couriers.map(cr => `<div class="p-2.5 bg-[#faf6f3] rounded-xl flex justify-between items-center text-xs"><div class="flex items-center gap-2"><img src="${cr.photo}" class="w-8 h-8 rounded-full object-cover"><span>${cr.name}</span></div><button onclick="deleteCourier(${cr.id})" class="text-red-500 font-bold">🗑️</button></div>`).join('')}
+            <div class="border-b pb-3 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-base text-zinc-900">🛵 Anggota Kurir Toko</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Kelola kurir yang bertugas pengantaran pesanan.</p>
+              </div>
+              <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2.5 py-1 rounded-full">${couriers.length} Kurir</span>
+            </div>
+            <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80 space-y-3">
+              <h4 class="font-bold text-xs text-zinc-800">${editCourierId ? '✏️ Edit Kurir' : '➕ Tambah Kurir Baru'}</h4>
+              <input id="c_name" placeholder="Nama Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
+              <input id="c_phone" placeholder="Nomor WhatsApp Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
+              <div>
+                <label class="text-[11px] font-bold text-zinc-600 block mb-1">Foto Kurir</label>
+                <input type="file" id="c_file" accept="image/*" onchange="previewAndCompressCourierPhoto(this)" class="w-full text-xs text-zinc-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-zinc-200">
+                <img id="c_preview" class="w-12 h-12 rounded-full hidden object-cover mt-2 border border-zinc-200">
+              </div>
+              <div class="flex gap-2 pt-1">
+                <button onclick="saveCourier()" class="flex-1 bg-purple-900 hover:bg-purple-950 text-white py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
+                  ${editCourierId ? '💾 Simpan Perubahan Kurir' : '➕ Tambah Kurir'}
+                </button>
+                ${editCourierId ? `<button onclick="resetCourierForm()" class="bg-zinc-200 hover:bg-zinc-300 text-zinc-700 px-3 py-2 rounded-xl text-xs font-bold">Batal</button>` : ''}
+              </div>
+            </div>
+            <div class="space-y-2 max-h-60 overflow-y-auto no-scrollbar pr-1">
+              ${couriers.map(cr => `
+                <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <img src="${cr.photo}" class="w-10 h-10 rounded-full object-cover border border-zinc-300">
+                    <div>
+                      <p class="font-bold text-xs text-zinc-900">${cr.name}</p>
+                      <p class="text-[11px] text-zinc-500">📱 ${cr.phone}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button onclick="editCourier(${cr.id})" class="p-1.5 bg-white text-purple-700 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs">✏️</button>
+                    <button onclick="deleteCourier(${cr.id})" class="p-1.5 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs">🗑️</button>
+                  </div>
+                </div>
+              `).join('') || '<p class="text-xs text-zinc-400 text-center py-4">Belum ada kurir terdaftar.</p>'}
             </div>
           </div>
         </div>
@@ -1948,135 +2155,738 @@ function admin() {
       <!-- TAB 6: TAMPILAN TOKO -->
       ${adminTab === 'settings' ? `
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 max-w-2xl mx-auto space-y-5">
-          <h3 class="font-bold text-base text-zinc-900 border-b pb-3">🎨 Pengaturan Tampilan & Banner</h3>
-          <div><label class="text-xs font-bold block mb-1">Nama Toko</label><input id="st_name" value="${siteSettings.storeName}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1">Judul Banner 1</label><input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1">Judul Banner 2</label><input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1">Deskripsi Banner</label><input id="st_desc" value="${siteSettings.bannerDesc}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div class="p-4 bg-[#faf6f3] rounded-2xl space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-bold">🖼️ Galeri Banner (${(siteSettings.bannerImages||[]).length} Foto)</span>
-              <label class="bg-purple-900 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer"><span>+ Tambah Banner</span><input type="file" accept="image/*" onchange="addBannerImage(this)" class="hidden"></label>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              ${(siteSettings.bannerImages||[]).map((img, idx) => `<div class="relative rounded-lg overflow-hidden h-20 border"><img src="${img}" class="w-full h-full object-cover"><button onclick="removeBannerImage(${idx})" class="absolute top-1 right-1 bg-red-600 text-white text-[9px] px-1 rounded">✕</button></div>`).join('')}
+          <h3 class="font-bold text-base text-zinc-900 border-b pb-3">🎨 Pengaturan Tampilan & Banner Multi-Foto Toko</h3>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Toko Utama</label>
+            <input id="st_name" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 1</label>
+            <input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 2</label>
+            <input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Singkat Banner</label>
+            <input id="st_desc" value="${siteSettings.bannerDesc}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div class="p-4 bg-purple-50/50 rounded-2xl border border-purple-200 space-y-2">
+            <span class="text-xs font-bold text-purple-950 block">👀 Pratinjau Langsung (Live Preview) Banner Slider:</span>
+            <div class="rounded-2xl overflow-hidden relative h-48 shadow-inner bg-zinc-900">
+              <img id="adminPreviewBannerImg" src="${(siteSettings.bannerImages && siteSettings.bannerImages.length > 0) ? siteSettings.bannerImages[0] : ''}" class="w-full h-full object-cover banner-fade">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+              <div class="absolute bottom-4 left-4 right-4 text-white pointer-events-none">
+                <p class="serif text-2xl leading-none">${siteSettings.bannerTitle1}</p>
+                <p class="serif text-2xl leading-none mt-0.5">${siteSettings.bannerTitle2}</p>
+                <p class="text-[11px] opacity-80 mt-1">${siteSettings.bannerDesc}</p>
+              </div>
             </div>
           </div>
-          <button onclick="saveSiteSettings()" class="w-full bg-black text-white py-3.5 rounded-2xl text-xs font-bold">Simpan Tampilan</button>
+          <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-xs font-bold text-zinc-900 block">🖼️ Galeri Foto Banner (${(siteSettings.bannerImages || []).length} Foto)</span>
+                <p class="text-[11px] text-zinc-500">Admin dapat mengunggah lebih dari satu foto untuk slider berganti otomatis.</p>
+              </div>
+              <label class="bg-purple-900 hover:bg-purple-950 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer shadow-sm transition-all">
+                <span>+ Tambah Foto Banner</span>
+                <input type="file" accept="image/*" onchange="addBannerImageCompressed(this)" class="hidden">
+              </label>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+              ${(siteSettings.bannerImages || []).map((imgUrl, idx) => `
+                <div class="relative group rounded-xl overflow-hidden border border-zinc-200 bg-white h-28 shadow-sm">
+                  <img src="${imgUrl}" class="w-full h-full object-cover">
+                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button onclick="removeBannerImage(${idx})" class="bg-red-600 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow">🗑️ Hapus</button>
+                  </div>
+                  <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">#${idx + 1}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <button onclick="saveSiteSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+            💾 Simpan Perubahan Tampilan Toko
+          </button>
         </div>
       ` : ''}
 
-      <!-- TAB 7: PENGATURAN AKUN & BACKUP -->
+      <!-- TAB 7: PENGATURAN KREDENSIAL, ALAMAT ADMIN & BACKUP ZIP -->
       ${adminTab === 'adminSettings' ? `
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 max-w-xl mx-auto space-y-6">
-          <h3 class="font-bold text-base text-zinc-900 border-b pb-3">⚙️ Pengaturan Akun Admin & Backup</h3>
-          <div><label class="text-xs font-bold block mb-1">No. WhatsApp Toko</label><input id="adm_wa" value="${adminAccount.phone}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1">Alamat Toko</label><textarea id="adm_address" rows="3" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]">${adminAccount.address}</textarea></div>
-          <div><label class="text-xs font-bold block mb-1">Email Admin</label><input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1 text-red-600">Password Lama</label><input id="adm_old_pass" type="password" class="w-full border p-3 rounded-2xl text-xs bg-red-50"></div>
-          <div><label class="text-xs font-bold block mb-1">Password Baru</label><input id="adm_pass" type="password" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <div><label class="text-xs font-bold block mb-1">Konfirmasi Password Baru</label><input id="adm_confirm_pass" type="password" class="w-full border p-3 rounded-2xl text-xs bg-[#faf6f3]"></div>
-          <button onclick="handleSaveAdminSettings()" class="w-full bg-black text-white py-3.5 rounded-2xl text-xs font-bold">Simpan Akun</button>
-          <div class="pt-6 border-t space-y-3">
-            <h4 class="font-bold text-sm">💾 Backup & Restore (ZIP)</h4>
+          <div class="border-b pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold base text-zinc-900">⚙️ Pengaturan Akun Admin</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">Ubah alamat toko/admin, nomor WhatsApp, email, dan password.</p>
+            </div>
+            <button onclick="logoutUser()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors">
+              🚪 Keluar Admin
+            </button>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Nomor WhatsApp Utama Toko (Tampil di Struk) *</label>
+            <input id="adm_wa" value="${adminAccount.phone || ''}" placeholder="6281234567890" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-purple-950 outline-none focus:border-black">
+            <p class="text-[10px] text-zinc-400 mt-1">Gunakan format angka tanpa tanda + (contoh: 6281234567890)</p>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">📍 Alamat Lengkap Admin / Toko (Tampil di Struk Cetak) *</label>
+            <textarea id="adm_address" rows="3" placeholder="Masukkan alamat lengkap toko..." class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">${adminAccount.address || ''}</textarea>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Email Login Admin *</label>
+            <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div class="pt-2 border-t border-zinc-100">
+            <label class="text-xs font-bold text-red-600 block mb-1">Password / Kode Lama Admin *</label>
+            <input id="adm_old_pass" type="password" placeholder="Masukkan password lama untuk konfirmasi" class="w-full border border-red-200 bg-red-50/30 p-3 rounded-2xl text-xs font-medium outline-none focus:border-red-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Password Baru Admin *</label>
+            <input id="adm_pass" type="password" placeholder="Masukkan password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">Konfirmasi Password Baru Admin *</label>
+            <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+          </div>
+          <button onclick="handleSaveAdminSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
+            💾 Simpan Pengaturan Akun Admin
+          </button>
+          
+          <!-- BACKUP & RESTORE DATA (ZIP / JSON) -->
+          <div class="pt-6 border-t border-zinc-200 space-y-3">
+            <h4 class="font-bold text-sm text-zinc-900">💾 Cadangkan & Pulihkan Data Toko (Backup & Restore)</h4>
+            <p class="text-xs text-zinc-500">Unduh seluruh database toko beserta seluruh gambar produk ke file arsip ZIP, atau pulihkan data dari file arsip cadangan.</p>
             <div class="flex gap-3">
-              <button onclick="exportAppData()" class="flex-1 bg-purple-900 text-white py-3 rounded-xl text-xs font-bold">📥 Unduh Backup (ZIP)</button>
-              <label class="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 py-3 rounded-xl text-xs font-bold text-center cursor-pointer"><span>📤 Pulihkan (ZIP/JSON)</span><input type="file" accept=".zip,.json" onchange="importAppData(this)" class="hidden"></label>
+              <button onclick="exportAppData()" class="flex-1 bg-purple-900 hover:bg-purple-950 text-white py-3 rounded-xl text-xs font-bold shadow-sm transition-all">
+                📥 Unduh Backup Lengkap (ZIP)
+              </button>
+              <label class="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 py-3 rounded-xl text-xs font-bold text-center cursor-pointer shadow-sm transition-all">
+                <span>📤 Pulihkan Data (ZIP/JSON)</span>
+                <input type="file" accept=".zip,.json" onchange="importAppData(this)" class="hidden">
+              </label>
             </div>
           </div>
         </div>
       ` : ''}
-    </div>
-  `;
+    </div>`;
 }
 
-// --- BACKUP & RESTORE DENGAN ZIP ---
-async function exportAppData() {
-  try {
-    showToast('Menyiapkan file backup...');
-    const zip = new JSZip();
-    const exportObj = {
-      products: JSON.parse(JSON.stringify(products)),
-      thirdPartyProducts: JSON.parse(JSON.stringify(thirdPartyProducts)),
-      couriers: JSON.parse(JSON.stringify(couriers)),
-      buyers, orders, siteSettings, categorySizes, deliverySettings, chatMessages, productReviews, operationalExpenses, stockRestockLogs, storeVouchers, adminAccount
-    };
-    zip.file("database.json", JSON.stringify(exportObj, null, 2));
-    const content = await zip.generateAsync({type: "blob"});
-    saveAs(content, `jish_store_backup_${new Date().toISOString().slice(0,10)}.zip`);
-    showToast('Backup berhasil diunduh!');
-  } catch (err) {
-    console.error(err);
-    alert('Gagal membuat backup.');
+// --- FUNGSI WRAPPER KOMPRESI UNTUK INPUT FILE DI ADMIN ---
+async function previewAndCompressTpMainImage(input) {
+  if (input.files && input.files[0]) {
+    showToast('Mengompresi gambar...');
+    tempTpImg = await compressImage(input.files[0], 800, 800, 0.7);
+    const pr = document.getElementById('tp_preview');
+    if (pr) {
+      pr.src = tempTpImg;
+      pr.classList.remove('hidden');
+    }
+    showToast('Gambar berhasil dikompresi!');
   }
 }
 
+async function previewAndCompressCourierPhoto(input) {
+  if (input.files && input.files[0]) {
+    showToast('Mengompresi foto kurir...');
+    tempCourierPhoto = await compressImage(input.files[0], 300, 300, 0.7);
+    const pr = document.getElementById('c_preview');
+    if (pr) {
+      pr.src = tempCourierPhoto;
+      pr.classList.remove('hidden');
+    }
+    showToast('Foto kurir berhasil dikompresi!');
+  }
+}
+
+async function addBannerImageCompressed(input) {
+  if (input.files && input.files[0]) {
+    showToast('Mengompresi foto banner...');
+    const compressedBanner = await compressImage(input.files[0], 1200, 800, 0.75);
+    if (!siteSettings.bannerImages) siteSettings.bannerImages = [];
+    siteSettings.bannerImages.push(compressedBanner);
+    save();
+    render();
+    showToast('Foto banner berhasil ditambahkan!');
+  }
+}
+
+async function compressColorImg(input, type, colorIndex) {
+  if (input.files && input.files[0]) {
+    showToast('Mengompresi foto warna variasi...');
+    const compressedColor = await compressImage(input.files[0], 600, 600, 0.7);
+    const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
+    if (targetArray[colorIndex]) {
+      targetArray[colorIndex].image = compressedColor;
+      const imgEl = document.getElementById(`${type}_color_preview_${colorIndex}`);
+      if (imgEl) imgEl.src = compressedColor;
+    }
+    showToast('Foto warna berhasil dikompresi!');
+  }
+}
+
+// --- FUNGSI BACKUP DATA LENGKAP DENGAN GAMBAR (ZIP) ---
+async function exportAppData() {
+  try {
+    showToast('Sedang menyiapkan file backup & gambar...');
+    const zip = new JSZip();
+    const exportProducts = JSON.parse(JSON.stringify(products));
+    const exportThirdParty = JSON.parse(JSON.stringify(thirdPartyProducts));
+    const exportCouriers = JSON.parse(JSON.stringify(couriers));
+    const exportSiteSettings = JSON.parse(JSON.stringify(siteSettings));
+    const exportObj = {
+      products: exportProducts,
+      thirdPartyProducts: exportThirdParty,
+      couriers: exportCouriers,
+      buyers,
+      orders,
+      siteSettings: exportSiteSettings,
+      categorySizes,
+      deliverySettings,
+      chatMessages,
+      productReviews,
+      operationalExpenses,
+      stockRestockLogs,
+      storeVouchers,
+      adminAccount
+    };
+    zip.file("database.json", JSON.stringify(exportObj, null, 2));
+    const imgFolder = zip.folder("images");
+    exportProducts.forEach((p) => {
+      if (p.image && p.image.startsWith('data:image')) {
+        const base64Data = p.image.replace(/^data:image\/\w+;base64,/, "");
+        imgFolder.file(`product_main_${p.id}.png`, base64Data, {base64: true});
+        p.image = `images/product_main_${p.id}.png`;
+      }
+      if (p.hasVariations && p.colors) {
+        p.colors.forEach((c, cIdx) => {
+          if (c.image && c.image.startsWith('data:image')) {
+            const b64 = c.image.replace(/^data:image\/\w+;base64,/, "");
+            imgFolder.file(`product_${p.id}_color_${cIdx}.png`, b64, {base64: true});
+            c.image = `images/product_${p.id}_color_${cIdx}.png`;
+          }
+        });
+      }
+    });
+    exportThirdParty.forEach((p) => {
+      if (p.image && p.image.startsWith('data:image')) {
+        const base64Data = p.image.replace(/^data:image\/\w+;base64,/, "");
+        imgFolder.file(`tp_product_${p.id}.png`, base64Data, {base64: true});
+        p.image = `images/tp_product_${p.id}.png`;
+      }
+      if (p.hasVariations && p.colors) {
+        p.colors.forEach((c, cIdx) => {
+          if (c.image && c.image.startsWith('data:image')) {
+            const b64 = c.image.replace(/^data:image\/\w+;base64,/, "");
+            imgFolder.file(`tp_${p.id}_color_${cIdx}.png`, b64, {base64: true});
+            c.image = `images/tp_${p.id}_color_${cIdx}.png`;
+          }
+        });
+      }
+    });
+    exportCouriers.forEach((cr) => {
+      if (cr.photo && cr.photo.startsWith('data:image')) {
+        const b64 = cr.photo.replace(/^data:image\/\w+;base64,/, "");
+        imgFolder.file(`courier_${cr.id}.png`, b64, {base64: true});
+        cr.photo = `images/courier_${cr.id}.png`;
+      }
+    });
+    if (exportSiteSettings.bannerImages) {
+      exportSiteSettings.bannerImages.forEach((bImg, bIdx) => {
+        if (bImg && bImg.startsWith('data:image')) {
+          const b64 = bImg.replace(/^data:image\/\w+;base64,/, "");
+          imgFolder.file(`banner_${bIdx}.png`, b64, {base64: true});
+          exportSiteSettings.bannerImages[bIdx] = `images/banner_${bIdx}.png`;
+        }
+      });
+    }
+    const content = await zip.generateAsync({type: "blob"});
+    saveAs(content, `jish_store_complete_backup_${new Date().toISOString().slice(0,10)}.zip`);
+    showToast('Backup lengkap beserta gambar berhasil diunduh!');
+  } catch (err) {
+    console.error(err);
+    alert('Terjadi kesalahan saat membuat backup ZIP.');
+  }
+}
+
+// --- FUNGSI RESTORE DATA LENGKAP DENGAN GAMBAR (ZIP / JSON) ---
 async function importAppData(input) {
   if (input.files && input.files[0]) {
     const file = input.files[0];
     const fileName = file.name.toLowerCase();
     try {
-      showToast('Memproses pemulihan...');
+      showToast('Memproses file pemulihan...');
       if (fileName.endsWith('.zip')) {
         const zip = new JSZip();
         const zipContent = await zip.loadAsync(file);
-        if (!zipContent.files["database.json"]) return alert('database.json tidak ditemukan dalam ZIP!');
+        if (!zipContent.files["database.json"]) {
+          return alert('File ZIP tidak valid! Tidak ditemukan file database.json di dalam arsip.');
+        }
         const jsonString = await zipContent.files["database.json"].async("string");
         const imported = JSON.parse(jsonString);
-        applyImportedData(imported);
+        if (imported.products) {
+          for (let p of imported.products) {
+            if (p.image && zipContent.files[p.image]) {
+              p.image = await blobToBase64(await zipContent.files[p.image].async("blob"));
+            }
+            if (p.colors) {
+              for (let c of p.colors) {
+                if (c.image && zipContent.files[c.image]) {
+                  c.image = await blobToBase64(await zipContent.files[c.image].async("blob"));
+                }
+              }
+            }
+          }
+          products = imported.products;
+        }
+        if (imported.thirdPartyProducts) {
+          for (let p of imported.thirdPartyProducts) {
+            if (p.image && zipContent.files[p.image]) {
+              p.image = await blobToBase64(await zipContent.files[p.image].async("blob"));
+            }
+            if (p.colors) {
+              for (let c of p.colors) {
+                if (c.image && zipContent.files[c.image]) {
+                  c.image = await blobToBase64(await zipContent.files[c.image].async("blob"));
+                }
+              }
+            }
+          }
+          thirdPartyProducts = imported.thirdPartyProducts;
+        }
+        if (imported.couriers) {
+          for (let cr of imported.couriers) {
+            if (cr.photo && zipContent.files[cr.photo]) {
+              cr.photo = await blobToBase64(await zipContent.files[cr.photo].async("blob"));
+            }
+          }
+          couriers = imported.couriers;
+        }
+        if (imported.siteSettings && imported.siteSettings.bannerImages) {
+          let restoredBanners = [];
+          for (let bImg of imported.siteSettings.bannerImages) {
+            if (bImg && zipContent.files[bImg]) {
+              restoredBanners.push(await blobToBase64(await zipContent.files[bImg].async("blob")));
+            } else {
+              restoredBanners.push(bImg);
+            }
+          }
+          imported.siteSettings.bannerImages = restoredBanners;
+        }
+        if (imported.buyers) buyers = imported.buyers;
+        if (imported.orders) orders = imported.orders;
+        if (imported.siteSettings) siteSettings = imported.siteSettings;
+        if (imported.categorySizes) categorySizes = imported.categorySizes;
+        if (imported.deliverySettings) deliverySettings = imported.deliverySettings;
+        if (imported.chatMessages) chatMessages = imported.chatMessages;
+        if (imported.productReviews) productReviews = imported.productReviews;
+        if (imported.operationalExpenses) operationalExpenses = imported.operationalExpenses;
+        if (imported.stockRestockLogs) stockRestockLogs = imported.stockRestockLogs;
+        if (imported.storeVouchers) storeVouchers = imported.storeVouchers;
+        if (imported.adminAccount) adminAccount = imported.adminAccount;
         save();
         render();
-        showToast('Data berhasil dipulihkan!');
+        showToast('Data toko dan seluruh gambar berhasil dipulihkan!');
       } else if (fileName.endsWith('.json')) {
         const reader = new FileReader();
         reader.onload = function(e) {
-          const imported = JSON.parse(e.target.result);
-          applyImportedData(imported);
-          save();
-          render();
-          showToast('Data JSON berhasil dipulihkan!');
+          try {
+            const imported = JSON.parse(e.target.result);
+            if (imported.products) products = imported.products;
+            if (imported.thirdPartyProducts) thirdPartyProducts = imported.thirdPartyProducts;
+            if (imported.couriers) couriers = imported.couriers;
+            if (imported.buyers) buyers = imported.buyers;
+            if (imported.orders) orders = imported.orders;
+            if (imported.siteSettings) siteSettings = imported.siteSettings;
+            if (imported.categorySizes) categorySizes = imported.categorySizes;
+            if (imported.deliverySettings) deliverySettings = imported.deliverySettings;
+            if (imported.chatMessages) chatMessages = imported.chatMessages;
+            if (imported.productReviews) productReviews = imported.productReviews;
+            if (imported.operationalExpenses) operationalExpenses = imported.operationalExpenses;
+            if (imported.stockRestockLogs) stockRestockLogs = imported.stockRestockLogs;
+            if (imported.storeVouchers) storeVouchers = imported.storeVouchers;
+            if (imported.adminAccount) adminAccount = imported.adminAccount;
+            save();
+            render();
+            showToast('Data toko (JSON) berhasil dipulihkan!');
+          } catch (err) {
+            alert('File JSON backup tidak valid!');
+          }
         };
         reader.readAsText(file);
+      } else {
+        alert('Format file tidak didukung! Harap unggah file berformat .zip atau .json');
       }
     } catch (err) {
       console.error(err);
-      alert('Gagal memulihkan data.');
+      alert('Gagal memproses file pemulihan arsip.');
     }
   }
 }
 
-function applyImportedData(imported) {
-  if (imported.products) products = imported.products;
-  if (imported.thirdPartyProducts) thirdPartyProducts = imported.thirdPartyProducts;
-  if (imported.couriers) couriers = imported.couriers;
-  if (imported.buyers) buyers = imported.buyers;
-  if (imported.orders) orders = imported.orders;
-  if (imported.siteSettings) siteSettings = imported.siteSettings;
-  if (imported.categorySizes) categorySizes = imported.categorySizes;
-  if (imported.deliverySettings) deliverySettings = imported.deliverySettings;
-  if (imported.chatMessages) chatMessages = imported.chatMessages;
-  if (imported.productReviews) productReviews = imported.productReviews;
-  if (imported.operationalExpenses) operationalExpenses = imported.operationalExpenses;
-  if (imported.stockRestockLogs) stockRestockLogs = imported.stockRestockLogs;
-  if (imported.storeVouchers) storeVouchers = imported.storeVouchers;
-  if (imported.adminAccount) adminAccount = imported.adminAccount;
+function blobToBase64(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
 }
 
-// --- FORM SAVE & AUTO-COMPRESS UTILITIES ---
-async function previewTpImage(input) {
-  if (input.files && input.files[0]) {
-    showToast('Mengompres gambar...');
-    const compressedBase64 = await compressImage(input.files[0], 800, 800, 0.7);
-    if (compressedBase64) {
-      tempTpImg = compressedBase64;
-      const pr = document.getElementById('tp_preview');
-      if (pr) { pr.src = tempTpImg; pr.classList.remove('hidden'); }
-      showToast('Gambar berhasil dikompres!');
+function openRestockModal(id) {
+  const p = thirdPartyProducts.find(x => x.id === id) || products.find(x => x.id === id);
+  if (!p) return;
+  if (p.hasVariations && p.colors && p.colors.length > 0) {
+    let colorOptionsText = p.colors.map((c, idx) => `${idx + 1}. ${c.name}`).join('\n');
+    let colorChoice = prompt(`📦 RESTOK PRODUK BERVARIASI: "${p.name}"\n\nPilih nomor warna yang ingin ditambahkan stoknya:\n${colorOptionsText}\n\nMasukkan nomor pilihan (1-${p.colors.length}):`, "1");
+    if (!colorChoice) return;
+    let cIdx = Number(colorChoice) - 1;
+    if (isNaN(cIdx) || !p.colors[cIdx]) return alert('Pilihan warna tidak valid!');
+    const selectedColor = p.colors[cIdx];
+    let sizeOptionsText = selectedColor.sizes.map((s, idx) => `${idx + 1}. Ukuran ${s.size} (Stok saat ini: ${s.stock})`).join('\n');
+    let sizeChoice = prompt(`Pilih nomor ukuran untuk warna "${selectedColor.name}":\n${sizeOptionsText}\n\nMasukkan nomor pilihan (1-${selectedColor.sizes.length}):`, "1");
+    if (!sizeChoice) return;
+    let sIdx = Number(sizeChoice) - 1;
+    if (isNaN(sIdx) || !selectedColor.sizes[sIdx]) return alert('Pilihan ukuran tidak valid!');
+    const selectedSizeObj = selectedColor.sizes[sIdx];
+    let addQty = prompt(`Masukkan jumlah tambahan stok untuk ${p.name} (${selectedColor.name} - Ukuran ${selectedSizeObj.size}):`, "10");
+    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
+      const qtyNum = Number(addQty);
+      selectedSizeObj.stock = (Number(selectedSizeObj.stock) || 0) + qtyNum;
+      stockRestockLogs.unshift({
+        id: Date.now(),
+        productName: `${p.name} (${selectedColor.name} - Uk. ${selectedSizeObj.size})`,
+        qtyAdded: qtyNum,
+        date: new Date().toLocaleString('id-ID')
+      });
+      save();
+      render();
+      showToast(`Berhasil menambah ${qtyNum} stok untuk ${selectedColor.name} (${selectedSizeObj.size})!`);
+    }
+  } else {
+    const addQty = prompt(`Tambah stok untuk barang "${p.name}":\nMasukkan jumlah tambahan stok:`, "10");
+    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
+      const qtyNum = Number(addQty);
+      p.stock += qtyNum;
+      stockRestockLogs.unshift({
+        id: Date.now(),
+        productName: p.name,
+        qtyAdded: qtyNum,
+        date: new Date().toLocaleString('id-ID')
+      });
+      save();
+      render();
+      showToast(`Berhasil menambah ${qtyNum} stok untuk ${p.name}!`);
     }
   }
 }
 
-async function saveTpProduct() {
+function saveExpense() {
+  const title = document.getElementById('exp_title').value.trim();
+  const amount = Number(document.getElementById('exp_amount').value);
+  if (!title || !amount) return showToast('Lengkapi keterangan dan nominal pengeluaran!');
+  operationalExpenses.unshift({
+    id: Date.now(),
+    title: title,
+    amount: amount,
+    date: new Date().toLocaleDateString('id-ID')
+  });
+  save();
+  render();
+  showToast('Pengeluaran operasional dicatat.');
+}
+
+function deleteExpense(id) {
+  if (confirm('Hapus catatan pengeluaran ini?')) {
+    operationalExpenses = operationalExpenses.filter(e => e.id !== id);
+    save();
+    render();
+    showToast('Pengeluaran dihapus.');
+  }
+}
+
+// --- CETAK STRUK & RESI ALAMAT TERPISAH ---
+function printOrderReceipt(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  document.body.className = "printing-receipt";
+  const container = document.getElementById('printableReceipt');
+  container.innerHTML = `
+    <div style="font-family: monospace; width: 300px; padding: 20px; background: white; color: black; font-size: 12px; margin: 0; text-align: left;">
+      <div style="text-align: center; border-bottom: 1px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: bold;">${siteSettings.storeName}</h3>
+        <p style="margin: 3px 0; font-size: 10px;">${adminAccount.address || 'Alamat Toko Utama'}</p>
+        <p style="margin: 2px 0; font-size: 10px;">📱 WA Admin: ${adminAccount.phone || '-'}</p>
+        <p style="margin: 4px 0 0 0; font-size: 9px; text-transform: uppercase;">-- Nota Transaksi --</p>
+        <p style="margin: 2px 0; font-size: 10px;">${o.date}</p>
+      </div>
+      <div style="margin-bottom: 10px; font-size: 11px;">
+        <p style="margin: 2px 0;"><b>Order ID:</b> #${o.id}</p>
+        <p style="margin: 2px 0;"><b>Pembeli:</b> ${o.buyerName} (${o.buyerPhone})</p>
+        <p style="margin: 2px 0;"><b>Alamat Tujuan:</b> ${o.buyerAddress}</p>
+        <p style="margin: 2px 0;"><b>Opsi Kirim:</b> ${o.deliveryMethod}</p>
+      </div>
+      <div style="border-bottom: 1px dashed black; padding-bottom: 5px; margin-bottom: 5px;">
+        ${o.items.map(item => `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="flex: 1; padding-right: 5px;">${item.name} (${item.qty}x)</span>
+            <span>Rp ${(item.price * item.qty).toLocaleString('id-ID')}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size: 11px;">
+        <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>Rp ${o.subtotal.toLocaleString('id-ID')}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>Ongkir:</span><span>Rp ${o.shippingFee.toLocaleString('id-ID')}</span></div>
+        ${o.voucherDiscount > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Voucher:</span><span>-Rp ${o.voucherDiscount.toLocaleString('id-ID')}</span></div>` : ''}
+        <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid black; margin-top: 4px; padding-top: 4px;">
+          <span>TOTAL:</span><span>Rp ${o.total.toLocaleString('id-ID')}</span>
+        </div>
+      </div>
+      <div style="text-align: center; border-top: 1px dashed black; margin-top: 15px; padding-top: 10px; font-size: 10px;">
+        <p style="margin: 0;">Terima Kasih Telah Berbelanja!</p>
+        <p style="margin: 2px 0; font-weight: bold;">${siteSettings.storeName}</p>
+      </div>
+    </div>
+  `;
+  window.print();
+  document.body.className = "";
+}
+
+function printAddressLabel(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  document.body.className = "printing-label";
+  const container = document.getElementById('printableAddressLabel');
+  container.innerHTML = `
+    <div style="font-family: sans-serif; width: 400px; padding: 25px; border: 2px solid black; background: white; color: black; margin: 0; text-align: left;">
+      <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: bold;">${siteSettings.storeName}</h2>
+          <p style="margin: 2px 0; font-size: 11px; color: #555;">Resi Pengiriman Paket</p>
+        </div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold;">
+          #${o.id}
+        </div>
+      </div>
+      <div style="margin-bottom: 15px; font-size: 13px;">
+        <p style="margin: 4px 0; font-size: 11px; text-transform: uppercase; color: #777; font-weight: bold;">Penerima:</p>
+        <p style="margin: 4px 0; font-size: 16px; font-weight: bold;">${o.buyerName}</p>
+        <p style="margin: 4px 0;">📱 ${o.buyerPhone}</p>
+        <p style="margin: 4px 0; line-height: 1.4;">📍 ${o.buyerAddress}</p>
+      </div>
+      <div style="border-top: 1px dashed #999; padding-top: 12px; font-size: 12px; margin-bottom: 15px;">
+        <p style="margin: 2px 0; font-weight: bold;">Kurir Bertugas: ${o.courier ? o.courier.name + ' (' + o.courier.phone + ')' : 'Belum ditentukan'}</p>
+        <p style="margin: 2px 0; font-weight: bold;">Metode: ${o.deliveryMethod}</p>
+      </div>
+      <div style="border-top: 2px solid black; padding-top: 10px; font-size: 11px;">
+        <p style="margin: 2px 0; font-weight: bold;">Isi Paket (${o.items.length} jenis item):</p>
+        <p style="margin: 2px 0; color: #333;">${o.text}</p>
+      </div>
+    </div>
+  `;
+  window.print();
+  document.body.className = "";
+}
+
+function removeBannerImage(index) {
+  if (siteSettings.bannerImages && siteSettings.bannerImages.length <= 1) {
+    return showToast('Minimal harus ada 1 foto banner di galeri!');
+  }
+  if (confirm('Hapus foto banner ini dari galeri?')) {
+    siteSettings.bannerImages.splice(index, 1);
+    save();
+    render();
+    showToast('Foto banner dihapus.');
+  }
+}
+
+function openCourierModal(orderId) {
+  activeAssignOrderId = orderId;
+  const o = orders.find(x => x.id === orderId);
+  selectedCourierIdInModal = o && o.courier ? o.courier.id : null;
+  const listContainer = document.getElementById('courierSelectionList');
+  if (couriers.length === 0) {
+    listContainer.innerHTML = '<p class="text-xs text-zinc-400 py-4 text-center">Belum ada kurir. Tambahkan kurir di tab Pengiriman & Kurir.</p>';
+  } else {
+    listContainer.innerHTML = couriers.map(cr => {
+      const isChecked = selectedCourierIdInModal === cr.id;
+      return `
+        <label class="flex items-center justify-between p-3 rounded-2xl border ${isChecked ? 'border-purple-600 bg-purple-50' : 'border-zinc-200 bg-[#faf6f3]'} cursor-pointer hover:border-purple-300 transition-all">
+          <div class="flex items-center gap-3">
+            <input type="radio" name="modalCourierSelect" value="${cr.id}" ${isChecked ? 'checked' : ''} onchange="selectedCourierIdInModal=${cr.id}" class="accent-purple-800">
+            <img src="${cr.photo}" class="w-9 h-9 rounded-full object-cover border border-zinc-300">
+            <div>
+              <p class="text-xs font-bold text-zinc-900">${cr.name}</p>
+              <p class="text-[10px] text-zinc-500">📱 ${cr.phone}</p>
+            </div>
+          </div>
+        </label>`;
+    }).join('');
+  }
+  document.getElementById('courierModal').classList.remove('hidden');
+}
+
+function closeCourierModal() {
+  document.getElementById('courierModal').classList.add('hidden');
+  activeAssignOrderId = null;
+  selectedCourierIdInModal = null;
+}
+
+function confirmCourierAssignment() {
+  if (!activeAssignOrderId) return;
+  if (!selectedCourierIdInModal) return showToast('Pilih salah satu kurir!');
+  const cr = couriers.find(c => c.id === selectedCourierIdInModal);
+  const o = orders.find(x => x.id === activeAssignOrderId);
+  if (cr && o) {
+    o.courier = cr;
+    save();
+    closeCourierModal();
+    render();
+    showToast('Kurir berhasil diset untuk pesanan ini!');
+  }
+}
+
+function openShippingWaModal(orderId) {
+  activeShippingWaOrderId = orderId;
+  const o = orders.find(x => x.id === orderId);
+  const isPickup = o && o.deliveryMethod === deliverySettings.pickupLabel;
+  const courierContainer = document.getElementById('courierSelectContainer');
+  const optCourierOnly = document.getElementById('optCourierOnly');
+  const optBoth = document.getElementById('optBoth');
+  const courierSelect = document.getElementById('shippingCourierSelect');
+  courierSelect.innerHTML = '<option value="">-- Pilih Kurir Bertugas --</option>' + couriers.map(cr => `<option value="${cr.id}" ${o && o.courier && o.courier.id === cr.id ? 'selected' : ''}>🛵 ${cr.name} (${cr.phone})</option>`).join('');
+  if (isPickup) {
+    courierContainer.classList.add('hidden');
+    optCourierOnly.classList.add('hidden');
+    optBoth.classList.add('hidden');
+    const buyerRadio = document.querySelector('input[name="shippingWaTarget"][value="buyer"]');
+    if (buyerRadio) buyerRadio.checked = true;
+  } else {
+    courierContainer.classList.remove('hidden');
+    optCourierOnly.classList.remove('hidden');
+    optBoth.classList.remove('hidden');
+    const bothRadio = document.querySelector('input[name="shippingWaTarget"][value="both"]');
+    if (bothRadio) bothRadio.checked = true;
+  }
+  document.getElementById('shippingWaModal').classList.remove('hidden');
+}
+
+function closeShippingWaModal() {
+  document.getElementById('shippingWaModal').classList.add('hidden');
+  activeShippingWaOrderId = null;
+}
+
+function executeShippingWaConfirmation() {
+  if (!activeShippingWaOrderId) return;
+  const o = orders.find(x => x.id === activeShippingWaOrderId);
+  if (!o) return;
+  const isPickup = o.deliveryMethod === deliverySettings.pickupLabel;
+  const courierSelectVal = document.getElementById('shippingCourierSelect').value;
+  const targetRadio = document.querySelector('input[name="shippingWaTarget"]:checked');
+  const target = targetRadio ? targetRadio.value : 'buyer';
+  if (!isPickup && (target === 'courier' || target === 'both' || courierSelectVal)) {
+    if (!courierSelectVal && (target === 'courier' || target === 'both')) {
+      return showToast('Pilih kurir bertugas terlebih dahulu!');
+    }
+    if (courierSelectVal) {
+      const cr = couriers.find(c => c.id === Number(courierSelectVal));
+      if (cr) o.courier = cr;
+    }
+  }
+  save();
+  const cleanBuyerPhone = o.buyerPhone ? o.buyerPhone.replace(/[^0-9]/g, '') : '';
+  const cleanCourierPhone = o.courier ? o.courier.phone.replace(/[^0-9]/g, '') : '';
+  let buyerText = "";
+  if (isPickup) {
+    buyerText = `Halo kak *${o.buyerName}*,\n\nPesanan Anda di *${siteSettings.storeName}* dengan ID Pesanan *#${o.id}* sudah siap untuk diambil di toko!\n\n📋 *Ringkasan Barang:* ${o.text}\n💰 *Total Pembayaran:* Rp ${o.total.toLocaleString('id-ID')}\n\nSilakan datang ke toko kami. Terima kasih!`;
+  } else {
+    buyerText = `Halo kak *${o.buyerName}*,\n\nPesanan Anda di *${siteSettings.storeName}* dengan ID Pesanan *#${o.id}* saat ini *SEDANG DALAM PENGIRIMAN* oleh kurir kami!\n\n📋 *Ringkasan Barang:* ${o.text}\n💰 *Total Pembayaran:* Rp ${o.total.toLocaleString('id-ID')}\n🛵 *Kurir Pengantar:* ${o.courier ? o.courier.name : '-'}\n📱 *No. Kurir:* ${o.courier ? o.courier.phone : '-'}\n\nMohon bersiap menerima pesanan di alamat tujuan. Terima kasih!`;
+  }
+  let courierText = `Halo *${o.courier ? o.courier.name : 'Kurir'}*,\n\nAda tugas pengantaran pesanan baru dari *${siteSettings.storeName}*:\n-------------------------------------\n📦 *ID Pesanan:* #${o.id}\n👤 *Nama Pembeli:* ${o.buyerName}\n📱 *No. WA Pembeli:* ${o.buyerPhone}\n📍 *Alamat Tujuan:* ${o.buyerAddress}\n-------------------------------------\n📋 *Barang:* ${o.text}\n💰 *Total Tagihan:* Rp ${o.total.toLocaleString('id-ID')}\n-------------------------------------\nMohon segera diantarkan ke alamat tujuan. Terima kasih!`;
+  if (target === 'buyer') {
+    if (cleanBuyerPhone) window.open(`https://wa.me/${cleanBuyerPhone}?text=${encodeURIComponent(buyerText)}`, '_blank');
+  } else if (target === 'courier') {
+    if (cleanCourierPhone) window.open(`https://wa.me/${cleanCourierPhone}?text=${encodeURIComponent(courierText)}`, '_blank');
+  } else if (target === 'both') {
+    if (cleanBuyerPhone) window.open(`https://wa.me/${cleanBuyerPhone}?text=${encodeURIComponent(buyerText)}`, '_blank');
+    setTimeout(() => {
+      if (cleanCourierPhone) window.open(`https://wa.me/${cleanCourierPhone}?text=${encodeURIComponent(courierText)}`, '_blank');
+    }, 1000);
+  }
+  closeShippingWaModal();
+  render();
+  showToast('Status diperbarui menjadi Dalam Pengiriman & Pesan WA dikirim!');
+}
+
+function updateOrderStatus(orderId, newStatus) {
+  const o = orders.find(x => x.id === orderId);
+  if (o) {
+    o.status = newStatus;
+    save();
+    render();
+    showToast('Status pesanan berhasil diperbarui!');
+  }
+}
+
+function deleteOrder(orderId) {
+  if (confirm('Yakin ingin menghapus pesanan ini?')) {
+    orders = orders.filter(x => x.id !== orderId);
+    save();
+    render();
+    showToast('Pesanan berhasil dihapus');
+  }
+}
+
+function focusOrderSearch() {
+  const el = document.getElementById('orderSearchInput');
+  if (el) {
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }
+}
+
+function sendAdminChat() {
+  const input = document.getElementById('adminChatInput');
+  const txt = input ? input.value.trim() : '';
+  if (!txt || !selectedAdminChatEmail) return;
+  const newMsg = {
+    id: Date.now(),
+    buyerEmail: selectedAdminChatEmail,
+    sender: 'admin',
+    text: txt,
+    time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  };
+  chatMessages.push(newMsg);
+  const chatBox = document.getElementById('adminChatBox');
+  if (chatBox) {
+    if (chatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+      chatBox.innerHTML = '';
+    }
+    chatBox.innerHTML += `
+      <div class="flex flex-col items-end">
+        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-black text-white rounded-br-none">
+          <p>${newMsg.text}</p>
+          <span class="text-[9px] opacity-75 mt-1 block text-right">${newMsg.time}</span>
+        </div>
+      </div>
+    `;
+    input.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+    input.focus();
+  }
+  save();
+}
+
+function deleteBuyer(email) {
+  if (confirm('Hapus pembeli ini dari daftar?')) {
+    buyers = buyers.filter(b => b.email !== email);
+    save();
+    render();
+    showToast('Pembeli berhasil dihapus');
+  }
+}
+
+function saveTpProduct() {
   const storeName = document.getElementById('tp_storeName').value.trim();
   const storePhone = document.getElementById('tp_storePhone').value.trim();
   const storeAddress = document.getElementById('tp_storeAddress').value.trim();
@@ -2087,51 +2897,56 @@ async function saveTpProduct() {
   const stock = Number(document.getElementById('tp_stock').value) || 0;
   const cat = document.getElementById('tp_cat').value.trim() || 'General';
   const hasVariations = document.getElementById('tpHasVariations').checked;
-
   if (!storeName || !storePhone || !storeAddress || !name || !costPrice || !price) {
-    return showToast('Lengkapi informasi toko, nama, harga beli & jual!');
+    return showToast('Lengkapi nama toko, kontak, alamat, nama barang, harga beli, dan harga jual!');
   }
-
-  let imageUrl = tempTpImg || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
-  const fileInput = document.getElementById('tp_file');
-  if (fileInput && fileInput.files && fileInput.files[0] && !tempTpImg) {
-    imageUrl = await compressImage(fileInput.files[0], 800, 800, 0.7);
-  }
-
+  const cleanStorePhone = storePhone.replace(/[^0-9]/g, '');
   let colorsList = [];
   if (hasVariations) {
-    const rawColors = collectColorsData('tp');
-    for (let c of rawColors) {
-      if (c.tempFileObj) {
-        c.image = await compressImage(c.tempFileObj, 600, 600, 0.7);
-      }
-      colorsList.push({ name: c.name, image: c.image, sizes: c.sizes });
-    }
+    colorsList = collectColorsData('tp');
     if (colorsList.length === 0) return showToast('Tambahkan minimal 1 warna variasi!');
   }
-
-  const cleanStorePhone = storePhone.replace(/[^0-9]/g, '');
-
   if (editTpId) {
     const idx = thirdPartyProducts.findIndex(p => p.id === editTpId);
     if (idx > -1) {
       thirdPartyProducts[idx] = {
         ...thirdPartyProducts[idx],
-        storeName, storePhone: cleanStorePhone, storeAddress, name, costPrice, price, oldPrice, stock, cat,
-        image: imageUrl, hasVariations, colors: colorsList
+        storeName,
+        storePhone: cleanStorePhone,
+        storeAddress,
+        name,
+        costPrice,
+        price,
+        oldPrice,
+        stock,
+        cat,
+        image: tempTpImg || thirdPartyProducts[idx].image,
+        hasVariations,
+        colors: colorsList
       };
     }
   } else {
     thirdPartyProducts.unshift({
-      id: Date.now(), isThirdParty: true,
-      storeName, storePhone: cleanStorePhone, storeAddress, name, costPrice, price, oldPrice, stock, cat,
-      image: imageUrl, hasVariations, colors: colorsList
+      id: Date.now(),
+      isThirdParty: true,
+      storeName,
+      storePhone: cleanStorePhone,
+      storeAddress,
+      name,
+      costPrice,
+      price,
+      oldPrice,
+      stock,
+      cat,
+      image: tempTpImg || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
+      hasVariations,
+      colors: colorsList
     });
   }
   save();
   resetTpForm();
   render();
-  showToast('Barang berhasil disimpan dengan gambar terkompresi!');
+  showToast('Barang toko lain berhasil disimpan!');
 }
 
 function editTpProduct(id) {
@@ -2152,23 +2967,29 @@ function editTpProduct(id) {
     document.getElementById('tp_stock').value = p.stock;
     document.getElementById('tp_cat').value = p.cat;
     const pr = document.getElementById('tp_preview');
-    if (pr) { pr.src = p.image; pr.classList.remove('hidden'); }
+    if (pr) {
+      pr.src = p.image;
+      pr.classList.remove('hidden');
+    }
     const chk = document.getElementById('tpHasVariations');
     if (chk) {
       chk.checked = !!p.hasVariations;
       toggleVariationSection(chk.checked, 'tp');
-      if (p.hasVariations) renderColorList('tp', tempTpProductColors);
+      if (p.hasVariations) {
+        renderColorList('tp', tempTpProductColors);
+      }
     }
-    document.getElementById('tpFormContainer')?.scrollIntoView({ behavior: 'smooth' });
+    const container = document.getElementById('tpFormContainer');
+    if (container) container.scrollIntoView({ behavior: 'smooth' });
   }, 100);
 }
 
 function deleteTpProduct(id) {
-  if (confirm('Hapus barang ini?')) {
+  if (confirm('Yakin ingin menghapus barang toko lain ini?')) {
     thirdPartyProducts = thirdPartyProducts.filter(x => x.id !== id);
     save();
     render();
-    showToast('Barang dihapus.');
+    showToast('Barang berhasil dihapus!');
   }
 }
 
@@ -2185,20 +3006,28 @@ function addTpProductToStore(storeName, storePhone, storeAddress) {
     document.getElementById('tp_storeName').value = storeName;
     document.getElementById('tp_storePhone').value = storePhone;
     document.getElementById('tp_storeAddress').value = storeAddress;
-    document.getElementById('tpFormContainer')?.scrollIntoView({ behavior: 'smooth' });
+    const container = document.getElementById('tpFormContainer');
+    if (container) container.scrollIntoView({ behavior: 'smooth' });
   }, 100);
 }
 
 function focusTpSearch() {
   const el = document.getElementById('tpSearchInput');
-  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  if (el) {
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }
 }
 
 function updateTpItemSearch(storeName, val) {
   searchTpItemQueries[storeName] = val;
   render();
   setTimeout(() => {
-    document.getElementById(`tpItemSearch_${encodeURIComponent(storeName)}`)?.focus();
+    const el = document.getElementById(`tpItemSearch_${encodeURIComponent(storeName)}`);
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
   }, 50);
 }
 
@@ -2206,20 +3035,33 @@ function toggleVariationSection(checked, type) {
   const container = document.getElementById(type === 'main' ? 'mainVariationContainer' : 'tpVariationContainer');
   const stockInput = document.getElementById(type === 'main' ? 'ps' : 'tp_stock');
   if (checked) {
-    container?.classList.remove('hidden');
-    if (stockInput) { stockInput.disabled = true; stockInput.value = '0'; }
+    if (container) container.classList.remove('hidden');
+    if (stockInput) {
+      stockInput.disabled = true;
+      stockInput.value = '0';
+    }
     const list = type === 'main' ? tempProductColors : tempTpProductColors;
-    if (list.length === 0) addColorVariation(type);
-    else renderColorList(type, list);
+    if (list.length === 0) {
+      addColorVariation(type);
+    } else {
+      renderColorList(type, list);
+    }
   } else {
-    container?.classList.add('hidden');
+    if (container) container.classList.add('hidden');
     if (stockInput) stockInput.disabled = false;
   }
 }
 
 function addColorVariation(type) {
   const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
-  targetArray.push({ name: '', image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500', tempFileObj: null, sizes: [{ size: 'S', stock: 5 }, { size: 'M', stock: 5 }] });
+  targetArray.push({
+    name: '',
+    image: '',
+    sizes: [
+      { size: 'S', stock: 5 },
+      { size: 'M', stock: 5 }
+    ]
+  });
   renderColorList(type, targetArray);
 }
 
@@ -2239,7 +3081,7 @@ function addSizeToColor(type, colorIndex) {
 
 function removeSizeFromColor(type, colorIndex, sizeIndex) {
   const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
-  if (targetArray[colorIndex]?.sizes) {
+  if (targetArray[colorIndex] && targetArray[colorIndex].sizes) {
     targetArray[colorIndex].sizes.splice(sizeIndex, 1);
     renderColorList(type, targetArray);
   }
@@ -2252,23 +3094,23 @@ function renderColorList(type, colorsArray) {
     <div class="p-3 bg-white rounded-2xl border border-purple-200 space-y-2">
       <div class="flex justify-between items-center gap-2">
         <input type="text" value="${c.name}" placeholder="Nama Warna (cth: Merah)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].name=this.value" class="flex-1 border border-zinc-200 bg-[#faf6f3] p-2 rounded-xl text-xs font-bold outline-none">
-        <button onclick="removeColorVariation('${type}', ${cIdx})" class="text-red-500 font-bold text-xs p-1">🗑️</button>
+        <button onclick="removeColorVariation('${type}', ${cIdx})" class="text-red-500 hover:text-red-700 font-bold text-xs p-1">🗑️</button>
       </div>
       <div class="flex items-center gap-2">
-        <input type="file" accept="image/*" onchange="captureColorFile(this, '${type}', ${cIdx})" class="w-full text-[11px] text-zinc-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-purple-100 file:text-purple-900">
+        <input type="file" accept="image/*" onchange="compressColorImg(this, '${type}', ${cIdx})" class="w-full text-[11px] text-zinc-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-purple-100 file:text-purple-900">
         <img id="${type}_color_preview_${cIdx}" src="${c.image || 'https://via.placeholder.com/100'}" class="w-8 h-8 rounded-lg object-cover border border-zinc-200">
       </div>
       <div class="pt-2 border-t border-zinc-100">
         <div class="flex justify-between items-center mb-1.5">
-          <span class="text-[11px] font-bold text-zinc-700">Ukuran & Stok:</span>
-          <button onclick="addSizeToColor('${type}', ${cIdx})" class="text-purple-800 font-bold text-[11px]">+ Tambah Ukuran</button>
+          <span class="text-[11px] font-bold text-zinc-700">Ukuran & Stok Warna Ini:</span>
+          <button onclick="addSizeToColor('${type}', ${cIdx})" class="text-purple-800 hover:underline font-bold text-[11px]">+ Tambah Ukuran</button>
         </div>
         <div class="space-y-1.5">
           ${c.sizes.map((sz, sIdx) => `
             <div class="flex items-center gap-2">
-              <input type="text" value="${sz.size}" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].size=this.value" class="w-24 border p-1.5 rounded-lg text-xs font-semibold">
-              <input type="number" value="${sz.stock}" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].stock=Number(this.value)" class="w-20 border p-1.5 rounded-lg text-xs font-bold text-emerald-800">
-              <button onclick="removeSizeFromColor('${type}', ${cIdx}, ${sIdx})" class="text-red-400 font-bold text-xs">✕</button>
+              <input type="text" value="${sz.size}" placeholder="Ukuran (cth: 39 / XL)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].size=this.value" class="w-24 border border-zinc-200 p-1.5 rounded-lg text-xs font-semibold">
+              <input type="number" value="${sz.stock}" placeholder="Stok" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].sizes[${sIdx}].stock=Number(this.value)" class="w-20 border border-zinc-200 p-1.5 rounded-lg text-xs font-bold text-emerald-800">
+              <button onclick="removeSizeFromColor('${type}', ${cIdx},${sIdx})" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
             </div>
           `).join('')}
         </div>
@@ -2277,101 +3119,74 @@ function renderColorList(type, colorsArray) {
   `).join('');
 }
 
-function captureColorFile(input, type, colorIndex) {
-  if (input.files && input.files[0]) {
-    const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
-    if (targetArray[colorIndex]) {
-      targetArray[colorIndex].tempFileObj = input.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById(`${type}_color_preview_${colorIndex}`).src = e.target.result;
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-  }
-}
-
 function collectColorsData(type) {
+  const listContainer = document.getElementById(type === 'main' ? 'mainColorList' : 'tpColorList');
+  if (!listContainer) return [];
   const targetArray = type === 'main' ? tempProductColors : tempTpProductColors;
   return targetArray.map(c => ({
     name: c.name || 'Warna Standard',
     image: c.image || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500',
-    tempFileObj: c.tempFileObj || null,
     sizes: c.sizes ? c.sizes.map(s => ({ size: String(s.size).trim(), stock: Number(s.stock) || 0 })) : []
   }));
 }
 
-function openRestockModal(id) {
-  const p = thirdPartyProducts.find(x => x.id === id) || products.find(x => x.id === id);
-  if (!p) return;
-  if (p.hasVariations && p.colors?.length > 0) {
-    let colorOptionsText = p.colors.map((c, idx) => `${idx + 1}. ${c.name}`).join('\n');
-    let colorChoice = prompt(`📦 RESTOK "${p.name}"\nPilih nomor warna:\n${colorOptionsText}`, "1");
-    if (!colorChoice) return;
-    let cIdx = Number(colorChoice) - 1;
-    if (isNaN(cIdx) || !p.colors[cIdx]) return alert('Pilihan warna tidak valid!');
-    const selectedColor = p.colors[cIdx];
-    let sizeOptionsText = selectedColor.sizes.map((s, idx) => `${idx + 1}. Ukuran ${s.size} (Stok: ${s.stock})`).join('\n');
-    let sizeChoice = prompt(`Pilih nomor ukuran untuk "${selectedColor.name}":\n${sizeOptionsText}`, "1");
-    if (!sizeChoice) return;
-    let sIdx = Number(sizeChoice) - 1;
-    if (isNaN(sIdx) || !selectedColor.sizes[sIdx]) return alert('Pilihan ukuran tidak valid!');
-    const selectedSizeObj = selectedColor.sizes[sIdx];
-    let addQty = prompt(`Jumlah tambahan stok untuk ${selectedColor.name} - ${selectedSizeObj.size}:`, "10");
-    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
-      const qtyNum = Number(addQty);
-      selectedSizeObj.stock = (Number(selectedSizeObj.stock) || 0) + qtyNum;
-      stockRestockLogs.unshift({ id: Date.now(), productName: `${p.name} (${selectedColor.name} - Uk. ${selectedSizeObj.size})`, qtyAdded: qtyNum, date: new Date().toLocaleString('id-ID') });
-      save();
-      render();
-      showToast(`Berhasil menambah ${qtyNum} stok!`);
-    }
-  } else {
-    const addQty = prompt(`Tambah stok untuk "${p.name}":`, "10");
-    if (addQty && !isNaN(addQty) && Number(addQty) > 0) {
-      const qtyNum = Number(addQty);
-      p.stock += qtyNum;
-      stockRestockLogs.unshift({ id: Date.now(), productName: p.name, qtyAdded: qtyNum, date: new Date().toLocaleString('id-ID') });
-      save();
-      render();
-      showToast(`Berhasil menambah ${qtyNum} stok!`);
-    }
-  }
-}
-
-function saveExpense() {
-  const title = document.getElementById('exp_title').value.trim();
-  const amount = Number(document.getElementById('exp_amount').value);
-  if (!title || !amount) return showToast('Lengkapi keterangan & nominal!');
-  operationalExpenses.unshift({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('id-ID') });
-  save();
-  render();
-  showToast('Pengeluaran dicatat.');
-}
-
 function saveDeliverySettings() {
-  deliverySettings.deliveryLabel = document.getElementById('del_label').value.trim() || deliverySettings.deliveryLabel;
-  deliverySettings.pickupLabel = document.getElementById('pickup_label').value.trim() || deliverySettings.pickupLabel;
-  deliverySettings.deliveryFee = Number(document.getElementById('del_fee').value) || 0;
+  const dLabel = document.getElementById('del_label').value.trim();
+  const pLabel = document.getElementById('pickup_label').value.trim();
+  const dFee = Number(document.getElementById('del_fee').value) || 0;
+  const minQty = Number(document.getElementById('del_min_qty').value) || 1;
+  const discAmt = Number(document.getElementById('del_disc_amt').value) || 0;
+  deliverySettings.deliveryLabel = dLabel || "🚚 Diantarkan ke Alamat";
+  deliverySettings.pickupLabel = pLabel || "🏪 Ambil Sendiri di Toko";
+  deliverySettings.deliveryFee = dFee;
+  deliverySettings.minQtyForDiscount = minQty;
+  deliverySettings.discountAmount = discAmt;
   save();
   render();
-  showToast('Pengaturan pengiriman disimpan!');
+  showToast('Pengaturan pengiriman berhasil disimpan!');
 }
 
-async function saveCourier() {
+function saveCourier() {
   const name = document.getElementById('c_name').value.trim();
   const phone = document.getElementById('c_phone').value.trim();
-  const fileInput = document.getElementById('c_file');
-  if (!name || !phone) return showToast('Isi nama dan nomor kurir!');
-  let photoUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200";
-  if (fileInput && fileInput.files && fileInput.files[0]) {
-    const compressed = await compressImage(fileInput.files[0], 300, 300, 0.7);
-    if (compressed) photoUrl = compressed;
+  if (!name || !phone) return showToast('Isi nama dan nomor WhatsApp kurir!');
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (editCourierId) {
+    const idx = couriers.findIndex(c => c.id === editCourierId);
+    if (idx > -1) {
+      couriers[idx] = {
+        id: editCourierId,
+        name,
+        phone: cleanPhone,
+        photo: tempCourierPhoto || couriers[idx].photo
+      };
+    }
+  } else {
+    couriers.push({
+      id: Date.now(),
+      name,
+      phone: cleanPhone,
+      photo: tempCourierPhoto || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200"
+    });
   }
-  couriers.push({ id: Date.now(), name, phone: phone.replace(/[^0-9]/g, ''), photo: photoUrl });
   save();
+  resetCourierForm();
   render();
-  showToast('Kurir ditambahkan!');
+  showToast('Data kurir berhasil disimpan!');
+}
+
+function editCourier(id) {
+  const cr = couriers.find(c => c.id === id);
+  if (!cr) return;
+  editCourierId = cr.id;
+  tempCourierPhoto = cr.photo;
+  document.getElementById('c_name').value = cr.name;
+  document.getElementById('c_phone').value = cr.phone;
+  const pr = document.getElementById('c_preview');
+  if (pr) {
+    pr.src = cr.photo;
+    pr.classList.remove('hidden');
+  }
 }
 
 function deleteCourier(id) {
@@ -2379,176 +3194,61 @@ function deleteCourier(id) {
     couriers = couriers.filter(c => c.id !== id);
     save();
     render();
-    showToast('Kurir dihapus.');
+    showToast('Kurir berhasil dihapus!');
   }
 }
 
-async function addBannerImage(input) {
-  if (input.files && input.files[0]) {
-    const compressed = await compressImage(input.files[0], 1200, 600, 0.7);
-    if (compressed) {
-      if (!siteSettings.bannerImages) siteSettings.bannerImages = [];
-      siteSettings.bannerImages.push(compressed);
-      save();
-      render();
-      showToast('Banner ditambahkan!');
-    }
-  }
-}
-
-function removeBannerImage(index) {
-  if (siteSettings.bannerImages && siteSettings.bannerImages.length <= 1) return showToast('Minimal 1 banner!');
-  if (confirm('Hapus banner ini?')) {
-    siteSettings.bannerImages.splice(index, 1);
-    save();
-    render();
-    showToast('Banner dihapus.');
-  }
+function resetCourierForm() {
+  editCourierId = null;
+  tempCourierPhoto = '';
+  render();
 }
 
 function saveSiteSettings() {
-  siteSettings.storeName = document.getElementById('st_name').value.trim() || siteSettings.storeName;
-  siteSettings.bannerTitle1 = document.getElementById('st_t1').value.trim();
-  siteSettings.bannerTitle2 = document.getElementById('st_t2').value.trim();
-  siteSettings.bannerDesc = document.getElementById('st_desc').value.trim();
+  const stName = document.getElementById('st_name').value.trim();
+  const stT1 = document.getElementById('st_t1').value.trim();
+  const stT2 = document.getElementById('st_t2').value.trim();
+  const stDesc = document.getElementById('st_desc').value.trim();
+  if (!stName) return showToast('Nama toko tidak boleh kosong!');
+  siteSettings.storeName = stName;
+  siteSettings.bannerTitle1 = stT1;
+  siteSettings.bannerTitle2 = stT2;
+  siteSettings.bannerDesc = stDesc;
   save();
   render();
-  showToast('Tampilan toko diperbarui!');
+  showToast('Tampilan toko berhasil diperbarui!');
 }
 
 function handleSaveAdminSettings() {
-  const oldP = document.getElementById('adm_old_pass').value;
-  const newP = document.getElementById('adm_pass').value;
-  const confirmP = document.getElementById('adm_confirm_pass').value;
-  if (oldP !== adminAccount.pass) return alert('Password lama salah!');
-  if (newP && newP !== confirmP) return alert('Konfirmasi password tidak cocok!');
+  const oldPassInput = document.getElementById('adm_old_pass').value;
+  const newPassInput = document.getElementById('adm_pass').value;
+  const confirmPassInput = document.getElementById('adm_confirm_pass').value;
+  const newAddressInput = document.getElementById('adm_address').value.trim();
+  if (!oldPassInput) {
+    alert('Harap masukkan password lama Anda untuk verifikasi!');
+    return;
+  }
+  if (oldPassInput !== adminAccount.pass) {
+    alert('Password lama yang Anda masukkan salah!');
+    return;
+  }
+  if (newPassInput || confirmPassInput) {
+    if (newPassInput !== confirmPassInput) {
+      alert('Password baru dan konfirmasi password tidak cocok!');
+      return;
+    }
+  }
   adminAccount.phone = document.getElementById('adm_wa').value.trim().replace(/[^0-9]/g, '');
   adminAccount.email = document.getElementById('adm_email').value.trim();
-  adminAccount.address = document.getElementById('adm_address').value.trim();
-  if (newP) adminAccount.pass = newP;
+  adminAccount.address = newAddressInput;
+  if (newPassInput) adminAccount.pass = newPassInput;
   WA_NUMBER = adminAccount.phone;
   save();
   render();
-  showToast('Pengaturan Admin Diperbarui!');
-}
-
-function printOrderReceipt(orderId) {
-  const o = orders.find(x => x.id === orderId);
-  if (!o) return;
-  document.body.className = "printing-receipt";
-  document.getElementById('printableReceipt').innerHTML = `
-    <div style="font-family: monospace; width: 300px; padding: 20px; background: white; color: black; font-size: 12px;">
-      <h3>${siteSettings.storeName}</h3>
-      <p>${adminAccount.address}</p>
-      <hr>
-      <p><b>Order ID:</b> #${o.id}</p>
-      <p><b>Pembeli:</b> ${o.buyerName} (${o.buyerPhone})</p>
-      <p>${o.text}</p>
-      <hr>
-      <p><b>Total: Rp ${o.total.toLocaleString('id-ID')}</b></p>
-    </div>
-  `;
-  window.print();
-  document.body.className = "";
-}
-
-function printAddressLabel(orderId) {
-  const o = orders.find(x => x.id === orderId);
-  if (!o) return;
-  document.body.className = "printing-label";
-  document.getElementById('printableAddressLabel').innerHTML = `
-    <div style="font-family: sans-serif; width: 400px; padding: 25px; border: 2px solid black; background: white;">
-      <h2>${siteSettings.storeName}</h2>
-      <h3>Penerima: ${o.buyerName}</h3>
-      <p>📱 ${o.buyerPhone}</p>
-      <p>📍 ${o.buyerAddress}</p>
-    </div>
-  `;
-  window.print();
-  document.body.className = "";
-}
-
-function openCourierModal(orderId) {
-  activeAssignOrderId = orderId;
-  const o = orders.find(x => x.id === orderId);
-  selectedCourierIdInModal = o?.courier?.id || null;
-  document.getElementById('courierSelectionList').innerHTML = couriers.map(cr => `
-    <label class="flex items-center gap-3 p-3 rounded-2xl border bg-[#faf6f3] cursor-pointer">
-      <input type="radio" name="modalCourierSelect" value="${cr.id}" ${selectedCourierIdInModal === cr.id ? 'checked' : ''} onchange="selectedCourierIdInModal=${cr.id}" class="accent-purple-800">
-      <img src="${cr.photo}" class="w-9 h-9 rounded-full object-cover">
-      <div><p class="text-xs font-bold">${cr.name}</p><p class="text-[10px]">${cr.phone}</p></div>
-    </label>
-  `).join('');
-  document.getElementById('courierModal').classList.remove('hidden');
-}
-
-function closeCourierModal() {
-  document.getElementById('courierModal').classList.add('hidden');
-}
-
-function confirmCourierAssignment() {
-  if (!activeAssignOrderId || !selectedCourierIdInModal) return;
-  const cr = couriers.find(c => c.id === selectedCourierIdInModal);
-  const o = orders.find(x => x.id === activeAssignOrderId);
-  if (cr && o) {
-    o.courier = cr;
-    save();
-    closeCourierModal();
-    render();
-    showToast('Kurir diset!');
-  }
-}
-
-function openShippingWaModal(orderId) {
-  activeShippingWaOrderId = orderId;
-  const o = orders.find(x => x.id === orderId);
-  document.getElementById('shippingCourierSelect').innerHTML = '<option value="">-- Pilih Kurir --</option>' + couriers.map(cr => `<option value="${cr.id}" ${o?.courier?.id === cr.id ? 'selected' : ''}>${cr.name}</option>`).join('');
-  document.getElementById('shippingWaModal').classList.remove('hidden');
-}
-
-function closeShippingWaModal() {
-  document.getElementById('shippingWaModal').classList.add('hidden');
-}
-
-function executeShippingWaConfirmation() {
-  const o = orders.find(x => x.id === activeShippingWaOrderId);
-  if (!o) return;
-  const courierVal = document.getElementById('shippingCourierSelect').value;
-  if (courierVal) o.courier = couriers.find(c => c.id === Number(courierVal));
-  o.status = 'Dalam Pengiriman';
-  save();
-  closeShippingWaModal();
-  render();
-  const buyerPhone = o.buyerPhone.replace(/[^0-9]/g, '');
-  const msg = encodeURIComponent(`Halo ${o.buyerName}, pesanan #${o.id} sedang dalam pengiriman.`);
-  window.open(`https://wa.me/${buyerPhone}?text=${msg}`, '_blank');
-  showToast('Status dikonfirmasi & WA dikirim!');
-}
-
-function updateOrderStatus(id, status) {
-  const o = orders.find(x => x.id === id);
-  if (o) { o.status = status; save(); render(); showToast('Status diperbarui!'); }
-}
-
-function deleteOrder(id) {
-  if (confirm('Hapus pesanan?')) { orders = orders.filter(x => x.id !== id); save(); render(); showToast('Pesanan dihapus.'); }
-}
-
-function sendAdminChat() {
-  const input = document.getElementById('adminChatInput');
-  const txt = input ? input.value.trim() : '';
-  if (!txt || !selectedAdminChatEmail) return;
-  chatMessages.push({ id: Date.now(), buyerEmail: selectedAdminChatEmail, sender: 'admin', text: txt, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) });
-  save();
-  render();
-}
-
-function deleteBuyer(email) {
-  if (confirm('Hapus pembeli?')) { buyers = buyers.filter(b => b.email !== email); save(); render(); showToast('Pembeli dihapus.'); }
+  showToast('Pengaturan Akun & Alamat Admin Berhasil Diperbarui!');
 }
 </script>
 
-<!-- MODULAR FIREBASE SDK (REALTIME DATABASE) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
@@ -2566,7 +3266,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
 window.db = db;
 window.dbRef = ref;
 window.dbSet = set;
@@ -2579,10 +3278,63 @@ onValue(ref(db, 'app_data'), (snapshot) => {
       playNotificationSound();
       showToast('🔔 Ada pesanan baru masuk!');
     }
+    if (chatMessages.length > 0 && data.chatMessages && data.chatMessages.length > chatMessages.length && isAdmin) {
+      const latestMsg = data.chatMessages[data.chatMessages.length - 1];
+      if (latestMsg && latestMsg.sender === 'buyer') {
+        playNotificationSound();
+        showToast(`💬 Pesan baru dari ${latestMsg.buyerEmail}`);
+        if (view === 'admin' && adminTab === 'buyers' && selectedAdminChatEmail === latestMsg.buyerEmail) {
+          const adminChatBox = document.getElementById('adminChatBox');
+          if (adminChatBox) {
+            if (adminChatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+              adminChatBox.innerHTML = '';
+            }
+            adminChatBox.innerHTML += `
+              <div class="flex flex-col items-start">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                  <p>${latestMsg.text}</p>
+                  <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
+                </div>
+              </div>
+            `;
+            adminChatBox.scrollTop = adminChatBox.scrollHeight;
+          }
+        }
+      }
+    }
+    if (chatMessages.length > 0 && data.chatMessages && data.chatMessages.length > chatMessages.length && !isAdmin && currentBuyer) {
+      const latestMsg = data.chatMessages[data.chatMessages.length - 1];
+      if (latestMsg && latestMsg.sender === 'admin' && latestMsg.buyerEmail === currentBuyer.email) {
+        playNotificationSound();
+        if (view === 'chat') {
+          const buyerChatBox = document.getElementById('chatBoxBuyer');
+          if (buyerChatBox) {
+            if (buyerChatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
+              buyerChatBox.innerHTML = '';
+            }
+            buyerChatBox.innerHTML += `
+              <div class="flex flex-col items-start">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                  <p>${latestMsg.text}</p>
+                  <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
+                </div>
+              </div>
+            `;
+            buyerChatBox.scrollTop = buyerChatBox.scrollHeight;
+          }
+        }
+      }
+    }
     applyDataToState(data);
-    if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) return;
-    if (isAdmin && adminTab === 'buyers' && document.getElementById('adminChatInput') === document.activeElement) return;
-    render();
+    if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) {
+      return;
+    }
+    if (isAdmin && adminTab === 'buyers' && document.getElementById('adminChatInput') === document.activeElement) {
+      return;
+    }
+    if (typeof render === 'function') {
+      render();
+    }
   } else {
     isInitialDataLoaded = true;
     render();
@@ -2593,11 +3345,13 @@ function applyDataToState(data) {
   if (data.products) products = data.products;
   if (data.thirdPartyProducts) thirdPartyProducts = data.thirdPartyProducts;
   if (data.couriers) couriers = data.couriers;
-  if (data.buyers) buyers = buyers.length > 0 ? buyers : (data.buyers || []);
+  if (data.buyers) buyers = data.buyers;
   if (data.orders) orders = data.orders;
   if (data.siteSettings) {
     siteSettings = data.siteSettings;
-    if (!siteSettings.bannerImages && siteSettings.bannerImage) siteSettings.bannerImages = [siteSettings.bannerImage];
+    if (!siteSettings.bannerImages && siteSettings.bannerImage) {
+      siteSettings.bannerImages = [siteSettings.bannerImage];
+    }
   }
   if (data.categorySizes) categorySizes = data.categorySizes;
   if (data.deliverySettings) deliverySettings = data.deliverySettings;
@@ -2608,6 +3362,7 @@ function applyDataToState(data) {
   if (data.storeVouchers) storeVouchers = data.storeVouchers;
   if (data.adminAccount) adminAccount = data.adminAccount;
 }
+
 render();
 </script>
 </body>
