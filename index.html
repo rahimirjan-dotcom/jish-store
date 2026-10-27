@@ -172,7 +172,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
 <div id="settingsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
   <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-zinc-100">
     <div class="flex justify-between items-center pb-3 border-b mb-4">
-      <h3 class="font-bold text-base text-zinc-900">⚙️ Pengaturan Pembeli</h3>
+      <h3 class="font-bold text-base text-zinc-900">👤 Akun Pembeli</h3>
       <button onclick="closeSettingsModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
     </div>
     <div class="space-y-4">
@@ -210,6 +210,7 @@ let adminAccount = {
 let WA_NUMBER = adminAccount.phone;
 
 // --- STATE MANAGEMENT ---
+let isInitialDataLoaded = false; // Penanda apakah data internet sudah masuk
 let products = [];
 let thirdPartyProducts = [];
 let couriers = [
@@ -333,8 +334,41 @@ function toggleOrderDetails(orderId) {
 
 // --- RENDER ROUTER & BANNER CONTROLLER ---
 function render() {
-  document.title = siteSettings.storeName;
   const app = document.getElementById('app');
+
+  // 1. Jika perangkat tidak terhubung ke internet sama sekali
+  if (!navigator.onLine) {
+    if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
+    app.innerHTML = `
+      <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+        <div class="text-center space-y-4">
+          <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+          <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
+          <p class="text-xs font-semibold text-red-500">⚠️ Perangkat Anda tidak terhubung ke internet.</p>
+          <p class="text-[11px] text-zinc-400">Menunggu sambungan jaringan untuk memuat data terbaru...</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // 2. Jika ada internet, tapi data pertama dari Firebase belum selesai ditarik
+  if (!isInitialDataLoaded) {
+    if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
+    app.innerHTML = `
+      <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+        <div class="text-center space-y-4">
+          <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+          <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
+          <p class="text-xs font-medium text-zinc-500">Memuat data terbaru dari server...</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // --- 3. JIKA DATA SUDAH SIAP & TERHUBUNG INTERNET (RENDER NORMAL) ---
+  document.title = siteSettings.storeName;
 
   if (bannerInterval) {
     clearInterval(bannerInterval);
@@ -427,9 +461,19 @@ function doReg() {
 function doLogin() {
   const input = document.getElementById('le').value.trim();
   const p = document.getElementById('lp').value;
+  
+  // 1. Cek Koneksi Internet Terlebih Dahulu
+  if (!navigator.onLine) {
+    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  }
+
   const cleanInput = input.replace(/[^0-9]/g, '');
   const f = buyers.find(b => (b.email === input || (b.phone && b.phone === cleanInput)) && b.pass === p);
+  
+  // 2. Jika Online tapi akun/password memang tidak cocok
   if (!f) return showToast('Email/WA atau password salah!');
+  
+  // 3. Jika Berhasil
   currentBuyer = f;
   sessionStorage.setItem('ssr_cb', JSON.stringify(f));
   view = 'shop';
@@ -440,7 +484,14 @@ function doLogin() {
 function doLoginAdmin() {
   const e = document.getElementById('ae').value;
   const p = document.getElementById('ap').value;
-  if (e === adminAccount.email && p === adminAccount.pass) {
+
+  // 1. Cek Koneksi Internet Terlebih Dahulu
+  if (!navigator.onLine) {
+    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
+  }
+
+  // 2. Cek Kredensial Admin
+  if (adminAccount && e === adminAccount.email && p === adminAccount.pass) {
     sessionStorage.setItem('ssr_ad', '1');
     isAdmin = true;
     view = 'admin';
@@ -527,7 +578,28 @@ function updateBuyerSettings() {
 
 function renderNav() {
   if (isAdmin) return '';
-  return ` <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 max-w-[460px] w-[92%] bg-white/90 backdrop-blur-md rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex justify-around items-center py-3 px-3 z-20 border border-zinc-100"> <button onclick="view='shop';render()" class="flex flex-col items-center ${view==='shop'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> <span class="text-lg leading-none">🏠</span> <span class="text-[10px] mt-0.5">Toko</span> </button> <button onclick="view='chat';render()" class="flex flex-col items-center ${view==='chat'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> <span class="text-lg leading-none">💬</span> <span class="text-[10px] mt-0.5">Chat</span> </button> <button onclick="openCart()" class="relative bg-black text-white w-11 h-11 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"> <span class="text-base">👜</span> <span class="absolute -top-1 -right-1 bg-[#cbb6e2] text-white text-[10px] w-5 h-5 grid place-items-center rounded-full font-bold shadow-sm"> ${cart.reduce((a,b)=>a+b.qty,0)} </span> </button> <button onclick="view='history';render()" class="flex flex-col items-center relative ${view==='history'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> <span class="text-lg leading-none">📋</span> <span class="text-[10px] mt-0.5">Pesanan</span> </button> <button onclick="openSettingsModal()" class="flex flex-col items-center text-zinc-400 hover:text-zinc-600"> <span class="text-lg leading-none">⚙️</span> <span class="text-[10px] mt-0.5">Pengaturan</span> </button> </nav>`;
+  return ` <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 max-w-[460px] w-[92%] bg-white/90 backdrop-blur-md rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex justify-around items-center py-3 px-3 z-20 border border-zinc-100"> 
+    <button onclick="view='shop';render()" class="flex flex-col items-center ${view==='shop'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> 
+      <span class="text-lg leading-none">🏠</span> 
+      <span class="text-[10px] mt-0.5">Toko</span> 
+    </button> 
+    <button onclick="view='chat';render()" class="flex flex-col items-center ${view==='chat'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> 
+      <span class="text-lg leading-none">💬</span> 
+      <span class="text-[10px] mt-0.5">Chat</span> 
+    </button> 
+    <button onclick="openCart()" class="relative bg-black text-white w-11 h-11 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"> 
+      <span class="text-base">👜</span> 
+      <span class="absolute -top-1 -right-1 bg-[#cbb6e2] text-white text-[10px] w-5 h-5 grid place-items-center rounded-full font-bold shadow-sm"> ${cart.reduce((a,b)=>a+b.qty,0)} </span> 
+    </button> 
+    <button onclick="view='history';render()" class="flex flex-col items-center relative ${view==='history'?'text-black font-bold':'text-zinc-400 hover:text-zinc-600'}"> 
+      <span class="text-lg leading-none">📋</span> 
+      <span class="text-[10px] mt-0.5">Pesanan</span> 
+    </button> 
+    <button onclick="openSettingsModal()" class="flex flex-col items-center text-zinc-400 hover:text-zinc-600"> 
+      <span class="text-lg leading-none">👤</span> 
+      <span class="text-[10px] mt-0.5">Akun</span> 
+    </button> 
+  </nav>`;
 }
 
 // --- VIEW: SHOP ---
@@ -2000,6 +2072,8 @@ window.dbSet = set;
 onValue(ref(db, 'app_data'), (snapshot) => {
   const data = snapshot.val();
   if (data) {
+    isInitialDataLoaded = true; // <-- Tambahkan baris penanda ini di sini
+
     // Deteksi pesanan baru untuk admin
     if (orders.length > 0 && data.orders && data.orders.length > orders.length && isAdmin) {
       playNotificationSound();
@@ -2013,15 +2087,12 @@ onValue(ref(db, 'app_data'), (snapshot) => {
         playNotificationSound();
         showToast(`💬 Pesan baru dari ${latestMsg.buyerEmail}`);
         
-        // --- TAMBAHAN: Update kotak chat admin secara instan tanpa render ulang halaman ---
         if (view === 'admin' && adminTab === 'buyers' && selectedAdminChatEmail === latestMsg.buyerEmail) {
           const adminChatBox = document.getElementById('adminChatBox');
           if (adminChatBox) {
-            // Hapus placeholder "belum ada pesan" jika ada
             if (adminChatBox.querySelector('.flex.flex-col.items-center.justify-center')) {
               adminChatBox.innerHTML = '';
             }
-            // Tambahkan pesan baru secara langsung ke bawah
             adminChatBox.innerHTML += `
               <div class="flex flex-col items-start">
                 <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
@@ -2042,7 +2113,6 @@ onValue(ref(db, 'app_data'), (snapshot) => {
       if (latestMsg && latestMsg.sender === 'admin' && latestMsg.buyerEmail === currentBuyer.email) {
         playNotificationSound();
         
-        // --- TAMBAHAN: Update kotak chat pembeli secara instan tanpa render ulang halaman ---
         if (view === 'chat') {
           const buyerChatBox = document.getElementById('chatBoxBuyer');
           if (buyerChatBox) {
@@ -2065,7 +2135,6 @@ onValue(ref(db, 'app_data'), (snapshot) => {
 
     applyDataToState(data);
     
-    // Mencegah gangguan fokus saat admin/pembeli sedang mengetik chat
     if (view === 'chat' && document.getElementById('buyerChatInput') === document.activeElement) {
       return;
     }
@@ -2076,6 +2145,9 @@ onValue(ref(db, 'app_data'), (snapshot) => {
     if (typeof render === 'function') {
       render();
     }
+  } else {
+    isInitialDataLoaded = true; // <-- Tambahkan juga di blok else jika database kosong
+    render();
   }
 });
 
