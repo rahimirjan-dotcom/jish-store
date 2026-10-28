@@ -1529,7 +1529,7 @@ function admin() {
         </div>
         <div class="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0">
           <span class="bg-emerald-50 text-emerald-600 text-xs px-3 py-1.5 rounded-full font-semibold border border-emerald-100 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           </span>
         </div>
       </header>
@@ -3315,8 +3315,24 @@ initIndexedDB().then(async () => {
     applyDataToState(cachedData);
     isInitialDataLoaded = true;
     render();
+  } else {
+    // Jika data cache kosong, tetap buka aplikasi agar tidak stuck
+    isInitialDataLoaded = true;
+    render();
   }
-}).catch(err => console.warn("Gagal membuka IndexedDB:", err));
+}).catch(err => {
+  console.warn("Gagal membuka IndexedDB:", err);
+  isInitialDataLoaded = true;
+  render();
+});
+
+// Timeout pengaman: Jika dalam 2 detik Firebase belum merespons, paksa buka aplikasi
+setTimeout(() => {
+  if (!isInitialDataLoaded) {
+    isInitialDataLoaded = true;
+    render();
+  }
+}, 2000);
 
 onValue(ref(db, 'app_data'), (snapshot) => {
   const data = snapshot.val();
@@ -3388,6 +3404,11 @@ onValue(ref(db, 'app_data'), (snapshot) => {
     isInitialDataLoaded = true;
     render();
   }
+}, (error) => {
+  console.error("Error membaca Firebase:", error);
+  // Jika Firebase gagal atau timeout, paksa buka aplikasi menggunakan data seadanya
+  isInitialDataLoaded = true;
+  render();
 });
 
 function applyDataToState(data) {
