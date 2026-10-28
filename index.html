@@ -286,6 +286,50 @@ let financeDateFilter = 'all';
 let currentBannerIndex = 0;
 let bannerInterval = null;
 
+// --- INDEXEDDB CACHE HELPER ---
+const DB_NAME = "JishStoreIndexedDB";
+const DB_VERSION = 1;
+let idbConn = null;
+
+function initIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = (e) => reject(e.target.error);
+    request.onsuccess = (e) => {
+      idbConn = e.target.result;
+      resolve(idbConn);
+    };
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("cache")) {
+        db.createObjectStore("cache");
+      }
+    };
+  });
+}
+
+function idbSave(key, value) {
+  return new Promise((resolve, reject) => {
+    if (!idbConn) return resolve();
+    const tx = idbConn.transaction("cache", "readwrite");
+    const store = tx.objectStore("cache");
+    store.put(value, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbGet(key) {
+  return new Promise((resolve, reject) => {
+    if (!idbConn) return resolve(null);
+    const tx = idbConn.transaction("cache", "readonly");
+    const store = tx.objectStore("cache");
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
 // --- WEB AUDIO API ---
 function playNotificationSound() {
   try {
@@ -306,7 +350,7 @@ function playNotificationSound() {
   }
 }
 
-// --- FUNGSI SIMPAN LANGSUNG KE FIREBASE ---
+// --- FUNGSI SIMPAN KE FIREBASE & INDEXEDDB CACHE ---
 const save = () => {
   const appDataPayload = {
     products,
@@ -324,6 +368,7 @@ const save = () => {
     storeVouchers,
     adminAccount
   };
+  idbSave("app_data", appDataPayload);
   if (window.dbSet && window.dbRef && window.db) {
     window.dbSet(window.dbRef(window.db, 'app_data'), appDataPayload)
       .catch(err => console.error("Gagal menyinkronkan ke Firebase:", err));
@@ -349,15 +394,14 @@ function toggleOrderDetails(orderId) {
 // --- RENDER ROUTER & BANNER CONTROLLER ---
 function render() {
   const app = document.getElementById('app');
-  if (!navigator.onLine) {
+  if (!navigator.onLine && !isInitialDataLoaded) {
     if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
     app.innerHTML = `
       <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
         <div class="text-center space-y-4">
           <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
-          <p class="text-xs font-semibold text-red-500">⚠️ Perangkat Anda tidak terhubung ke internet.</p>
-          <p class="text-[11px] text-zinc-400">Menunggu sambungan jaringan untuk memuat data terbaru...</p>
+          <p class="text-xs font-semibold text-amber-600">⚠️ Perangkat Anda offline. Memuat data dari memori lokal...</p>
         </div>
       </div>
     `;
@@ -370,7 +414,7 @@ function render() {
         <div class="text-center space-y-4">
           <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
-          <p class="text-xs font-medium text-zinc-500">Memuat data terbaru dari server...</p>
+          <p class="text-xs font-medium text-zinc-500">Memuat data instan dari IndexedDB...</p>
         </div>
       </div>
     `;
@@ -514,9 +558,6 @@ function doReg() {
 function doLogin() {
   const input = document.getElementById('le').value.trim();
   const p = document.getElementById('lp').value;
-  if (!navigator.onLine) {
-    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
-  }
   const cleanInput = input.replace(/[^0-9]/g, '');
   const f = buyers.find(b => (b.email === input || (b.phone && b.phone === cleanInput)) && b.pass === p);
   if (!f) return showToast('Email/WA atau password salah!');
@@ -530,9 +571,6 @@ function doLogin() {
 function doLoginAdmin() {
   const e = document.getElementById('ae').value;
   const p = document.getElementById('ap').value;
-  if (!navigator.onLine) {
-    return showToast('Gagal masuk: Perangkat tidak terhubung ke internet!');
-  }
   if (adminAccount && e === adminAccount.email && p === adminAccount.pass) {
     sessionStorage.setItem('ssr_ad', '1');
     isAdmin = true;
@@ -1491,7 +1529,7 @@ function admin() {
         </div>
         <div class="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0">
           <span class="bg-emerald-50 text-emerald-600 text-xs px-3 py-1.5 rounded-full font-semibold border border-emerald-100 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online (Firebase Realtime)
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online
           </span>
         </div>
       </header>
@@ -3270,10 +3308,21 @@ window.db = db;
 window.dbRef = ref;
 window.dbSet = set;
 
+// Inisialisasi IndexedDB dan muat data instan lokal sebelum Firebase merespons
+initIndexedDB().then(async () => {
+  const cachedData = await idbGet("app_data");
+  if (cachedData) {
+    applyDataToState(cachedData);
+    isInitialDataLoaded = true;
+    render();
+  }
+}).catch(err => console.warn("Gagal membuka IndexedDB:", err));
+
 onValue(ref(db, 'app_data'), (snapshot) => {
   const data = snapshot.val();
   if (data) {
     isInitialDataLoaded = true;
+    idbSave("app_data", data); // Simpan cache lokal terbaru
     if (orders.length > 0 && data.orders && data.orders.length > orders.length && isAdmin) {
       playNotificationSound();
       showToast('🔔 Ada pesanan baru masuk!');
