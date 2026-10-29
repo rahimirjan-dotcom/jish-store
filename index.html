@@ -30,11 +30,11 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
 }
 </style>
 </head>
-<body class="bg-[#faf6f3] text-zinc-800 antialiased min-h-screen">
+<body class="bg-[#f7f3ee] text-zinc-800 antialiased min-h-screen">
 <div id="app"></div>
 
 <!-- Custom Toast / Alert -->
-<div id="toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-6 py-3 rounded-full text-sm font-medium shadow-xl transition-all"></div>
+<div id="toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-6 py-3 rounded-full text-xs font-medium shadow-xl transition-all"></div>
 
 <!-- Hidden Printable Containers -->
 <div id="printableReceipt" class="hidden"></div>
@@ -54,7 +54,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
         <!-- KONTAINER VIDEO KAMERA HTML5-QRCODE -->
         <div id="reader" class="w-full max-w-xs rounded-xl overflow-hidden bg-black min-h-[200px]"></div>
         <!-- Input darurat / simulasi pembacaan ID Pesanan -->
-        <input id="scannedOrderIdInput" type="text" placeholder="Atau ketik/masukkan Order ID manual..." class="mt-3 w-full max-w-xs text-xs p-2 rounded-xl text-zinc-950 font-bold text-center outline-none" onkeypress="if(event.key==='Enter') processScannedOrderId(this.value)">
+        <input id="scannedOrderIdInput" type="text" placeholder="Atau ketik/masukkan Order ID manual..." class="mt-3 w-full max-w-xs text-xs p-2.5 rounded-xl text-zinc-950 font-bold text-center outline-none" onkeypress="if(event.key==='Enter') processScannedOrderId(this.value)">
       </div>
       <button onclick="processScannedOrderId(document.getElementById('scannedOrderIdInput').value)" class="w-full bg-purple-900 hover:bg-purple-950 text-white py-3 rounded-xl text-xs font-bold shadow-md">
         🔍 Cari Berdasarkan ID / Barcode
@@ -85,7 +85,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
         </div>
       </div>
       <!-- Rincian Barang -->
-      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200 text-xs space-y-2">
+      <div class="bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-200 text-xs space-y-2">
         <p class="font-bold text-zinc-900">📦 Daftar Barang Pesanan:</p>
         <div id="resItemsList" class="space-y-1"></div>
         <div class="border-t pt-2 flex justify-between font-bold text-zinc-900">
@@ -130,21 +130,21 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
     <div class="mt-4 space-y-4">
       <div id="courierSelectContainer">
         <label class="text-xs font-bold text-zinc-800 block mb-1.5">1. Pilih Kurir Yang Bertugas <span id="courierReqStar" class="text-red-500">*</span></label>
-        <select id="shippingCourierSelect" class="w-full text-xs p-3 rounded-2xl border border-zinc-200 bg-[#faf6f3] font-medium outline-none focus:border-purple-600">
+        <select id="shippingCourierSelect" class="w-full text-xs p-3 rounded-2xl border border-zinc-200 bg-[#f7f3ee] font-medium outline-none focus:border-purple-600">
           <option value="">-- Pilih Kurir Bertugas --</option>
         </select>
       </div>
       <div>
         <label class="text-xs font-bold text-zinc-800 block mb-1.5">2. Pilih Tujuan Kirim Pesan WhatsApp <span class="text-red-500">*</span></label>
         <div id="shippingWaTargetList" class="space-y-2 text-xs">
-          <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#faf6f3] cursor-pointer hover:border-purple-300">
+          <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#f7f3ee] cursor-pointer hover:border-purple-300">
             <input type="radio" name="shippingWaTarget" value="buyer" class="accent-purple-800">
             <div>
               <span class="font-bold text-zinc-900 block">Kirim ke Pembeli saja</span>
               <span class="text-[10px] text-zinc-500">Notifikasi bahwa pesanan sedang dalam pengiriman / siap diambil</span>
             </div>
           </label>
-          <label id="optCourierOnly" class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#faf6f3] cursor-pointer hover:border-purple-300">
+          <label id="optCourierOnly" class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-200 bg-[#f7f3ee] cursor-pointer hover:border-purple-300">
             <input type="radio" name="shippingWaTarget" value="courier" class="accent-purple-800">
             <div>
               <span class="font-bold text-zinc-900 block">Kirim ke Kurir saja</span>
@@ -192,7 +192,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
       <input type="hidden" id="reviewOrderId">
       <div>
         <label class="text-xs font-bold text-zinc-700 block mb-1">Rating Bintang (1 - 5):</label>
-        <select id="reviewRating" class="w-full text-xs p-2.5 rounded-xl border border-zinc-200 bg-[#faf6f3] font-bold outline-none">
+        <select id="reviewRating" class="w-full text-xs p-2.5 rounded-xl border border-zinc-200 bg-[#f7f3ee] font-bold outline-none">
           <option value="5">⭐⭐⭐⭐⭐ (5 - Sangat Memuaskan)</option>
           <option value="4">⭐⭐⭐⭐ (4 - Puas)</option>
           <option value="3">⭐⭐⭐ (3 - Cukup)</option>
@@ -202,7 +202,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
       </div>
       <div>
         <label class="text-xs font-bold text-zinc-700 block mb-1">Komentar & Ulasan Anda:</label>
-        <textarea id="reviewComment" rows="3" placeholder="Ceritakan pengalaman produk ini..." class="w-full text-xs p-3 rounded-xl border border-zinc-200 bg-[#faf6f3] outline-none"></textarea>
+        <textarea id="reviewComment" rows="3" placeholder="Ceritakan pengalaman produk ini..." class="w-full text-xs p-3 rounded-xl border border-zinc-200 bg-[#f7f3ee] outline-none"></textarea>
       </div>
       <button onclick="submitProductReview()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-xl text-xs font-bold shadow-md transition-all">Kirim Ulasan</button>
     </div>
@@ -217,7 +217,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
       <button onclick="closeSettingsModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
     </div>
     <div class="space-y-4">
-      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-100 space-y-2">
+      <div class="bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-100 space-y-2">
         <h4 class="font-bold text-xs text-zinc-800 mb-1">👤 Profil Pembeli</h4>
         <div>
           <label class="text-[10px] font-bold text-zinc-500 block">Email Login</label>
@@ -228,7 +228,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
           <input id="buyerPhoneInput" type="tel" placeholder="Nomor WA Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
         </div>
       </div>
-      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-100 space-y-2">
+      <div class="bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-100 space-y-2">
         <h4 class="font-bold text-xs text-zinc-800 mb-1">🔒 Ganti Password</h4>
         <input id="currentPass" type="password" placeholder="Password Lama" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
         <input id="newPass" type="password" placeholder="Password Baru" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs outline-none focus:border-purple-400">
@@ -480,7 +480,7 @@ function render() {
   if (!navigator.onLine) {
     if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
     app.innerHTML = `
-      <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+      <div class="min-h-screen grid place-items-center p-6 bg-[#f7f3ee]">
         <div class="text-center space-y-4">
           <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
@@ -494,7 +494,7 @@ function render() {
   if (!isInitialDataLoaded) {
     if (bannerInterval) { clearInterval(bannerInterval); bannerInterval = null; }
     app.innerHTML = `
-      <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
+      <div class="min-h-screen grid place-items-center p-6 bg-[#f7f3ee]">
         <div class="text-center space-y-4">
           <div class="inline-block w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           <h1 class="serif text-3xl tracking-wide">${siteSettings.storeName}</h1>
@@ -555,53 +555,65 @@ function gate() {
   }
 
   return `
-    <div class="min-h-screen bg-[#faf6f3] py-10 px-4 sm:px-6 flex flex-col items-center relative">
-      <div class="absolute top-6 right-6 z-10">
-        <button onclick="openScanModal()" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5 hover:bg-zinc-800 transition-all">
-          <span>📷</span> <span>Scan Resi / Struk</span>
-        </button>
-      </div>
+    <div class="min-h-screen bg-[#f7f3ee] py-8 px-4 sm:px-6 flex flex-col items-center relative overflow-x-hidden">
+      <!-- Background Decorative Glow Orbs -->
+      <div class="absolute top-10 left-1/2 -translate-x-1/2 w-72 h-72 bg-purple-200/50 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div class="w-full max-w-4xl mx-auto space-y-8 mt-6 sm:mt-0">
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-zinc-100 text-center relative overflow-hidden">
-          <div class="absolute -right-10 -top-10 w-40 h-40 bg-purple-100 rounded-full blur-2xl opacity-65 pointer-events-none"></div>
-          <h1 class="serif text-4xl sm:text-5xl leading-none tracking-wide mb-3">${siteSettings.storeName}</h1>
-          <p class="text-xs sm:text-sm text-zinc-500 max-w-md mx-auto mb-6">Temukan koleksi produk pilihan terbaik kami. Masuk atau daftar akun untuk mulai berbelanja.</p>
+      <div class="w-full max-w-4xl mx-auto space-y-6 relative z-10">
+        
+        <!-- Header Top Brand & Scan Button -->
+        <div class="flex justify-between items-center bg-white/80 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-zinc-100/80">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-purple-900 text-white flex items-center justify-center font-bold text-sm shadow-sm">🛍️</span>
+            <h2 class="serif text-2xl tracking-wide font-bold">${siteSettings.storeName}</h2>
+          </div>
+          <button onclick="openScanModal()" class="bg-black hover:bg-zinc-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition-all active:scale-95">
+            <span>📷</span> <span>Scan Resi</span>
+          </button>
+        </div>
+
+        <!-- Hero Card Utama -->
+        <div class="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-purple-900/5 border border-zinc-100 text-center relative overflow-hidden">
+          <div class="absolute -right-12 -top-12 w-44 h-44 bg-purple-100 rounded-full blur-2xl opacity-65 pointer-events-none"></div>
+          <span class="inline-block bg-purple-50 text-purple-800 text-[11px] font-bold px-3 py-1 rounded-full mb-3 border border-purple-100">Selamat Datang 👋</span>
+          <h1 class="serif text-4xl sm:text-6xl leading-tight tracking-wide mb-3 text-zinc-900">${siteSettings.storeName}</h1>
+          <p class="text-xs sm:text-sm text-zinc-500 max-w-md mx-auto mb-8 leading-relaxed">Temukan koleksi produk pilihan terbaik kami dengan mudah. Masuk atau daftar akun untuk mulai berbelanja.</p>
           
-          <div class="flex flex-col sm:flex-row justify-center gap-3 max-w-xs sm:max-w-md mx-auto">
-            <button onclick="view='login';render()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-xs sm:text-sm shadow-md active:scale-98 transition-all">
-              🛍️ Masuk Sebagai Pembeli
+          <div class="flex flex-col sm:flex-row justify-center gap-3.5 max-w-sm sm:max-w-md mx-auto">
+            <button onclick="view='login';render()" class="w-full bg-purple-900 hover:bg-purple-950 text-white py-4 rounded-2xl font-semibold text-xs sm:text-sm shadow-lg shadow-purple-900/10 active:scale-98 transition-all flex items-center justify-center gap-2">
+              <span>🛍️</span> Masuk Sebagai Pembeli
             </button>
-            <button onclick="view='loginAdmin';render()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full font-medium text-xs sm:text-sm shadow-md active:scale-98 transition-all">
-              🔒 Masuk Admin
+            <button onclick="view='loginAdmin';render()" class="w-full bg-zinc-900 hover:bg-black text-white py-4 rounded-2xl font-semibold text-xs sm:text-sm shadow-md active:scale-98 transition-all flex items-center justify-center gap-2">
+              <span>🔒</span> Masuk Admin
             </button>
           </div>
         </div>
 
+        <!-- Etalase Produk Unggulan -->
         ${siteSettings.showGateProducts !== false ? `
           <div class="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-zinc-100">
-            <div class="flex justify-between items-center mb-5">
+            <div class="flex justify-between items-center mb-6">
               <div>
-                <h3 class="serif text-2xl font-bold text-zinc-900">✨ Produk Unggulan Pilihan</h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Klik produk di bawah untuk mendaftar dan mulai checkout.</p>
+                <h3 class="serif text-2xl sm:text-3xl font-bold text-zinc-900">✨ Produk Unggulan Pilihan</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Klik produk untuk mendaftar dan mulai checkout.</p>
               </div>
-              <button onclick="view='login';render()" class="text-xs font-bold text-[#a48bc1] hover:underline">Lihat Semua →</button>
+              <button onclick="view='login';render()" class="text-xs font-bold text-purple-700 hover:underline">Lihat Semua →</button>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5">
               ${displayProducts.length > 0 ? displayProducts.map(p => `
-                <div onclick="handleGateProductClick()" class="bg-[#faf6f3] rounded-2xl p-3 flex flex-col justify-between cursor-pointer group hover:shadow-md transition-all border border-zinc-200/60">
+                <div onclick="handleGateProductClick()" class="bg-[#f7f3ee] rounded-2xl p-3 flex flex-col justify-between cursor-pointer group hover:shadow-md transition-all border border-zinc-200/60">
                   <div>
                     <div class="overflow-hidden rounded-xl relative mb-2.5">
                       <img src="${p.image}" class="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300">
-                      <span class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm">
+                      <span class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm text-purple-950">
                         Rp ${(p.price/1000).toFixed(0)}k
                       </span>
                     </div>
                     <p class="text-xs font-semibold text-zinc-800 line-clamp-1 group-hover:text-purple-700 transition-colors">${p.name}</p>
                     <span class="inline-block mt-1 bg-purple-100 text-purple-900 text-[9px] font-bold px-2 py-0.5 rounded-md truncate max-w-full">${p.cat}</span>
                   </div>
-                  <button class="w-full mt-3 bg-black text-white py-2 rounded-xl text-[10px] font-bold shadow-sm group-hover:bg-[#cbb6e2] transition-colors">
+                  <button class="w-full mt-3 bg-black text-white py-2 rounded-xl text-[10px] font-bold shadow-sm group-hover:bg-purple-900 transition-colors">
                     Daftar ➔
                   </button>
                 </div>
@@ -614,8 +626,8 @@ function gate() {
           </div>
         ` : ''}
 
-        <div class="text-center pb-6">
-          <p class="text-xs text-zinc-400">Belum punya akun pembeli? <button onclick="view='register';render()" class="text-purple-700 font-bold hover:underline">Daftar Akun Baru di Sini</button></p>
+        <div class="text-center pb-8 pt-2">
+          <p class="text-xs text-zinc-500">Belum punya akun pembeli? <button onclick="view='register';render()" class="text-purple-700 font-bold hover:underline">Daftar Akun Baru di Sini</button></p>
         </div>
       </div>
     </div>`;
@@ -631,16 +643,16 @@ function handleGateProductClick() {
 
 function login() {
   return `
-    <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
-      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+    <div class="min-h-screen grid place-items-center p-6 bg-[#f7f3ee]">
+      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-xl shadow-purple-900/5 border border-zinc-100">
         <h2 class="serif text-3xl text-center">Masuk Akun</h2>
         <p class="text-[10px] text-zinc-400 text-center mb-6 tracking-widest uppercase">PEMBELI • ${siteSettings.storeName}</p>
-        <input id="le" type="text" placeholder="Email atau No. WhatsApp" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
-        <input id="lp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-[#cbb6e2]">
-        <button onclick="doLogin()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
+        <input id="le" type="text" placeholder="Email atau No. WhatsApp" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors">
+        <input id="lp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-purple-600 transition-colors">
+        <button onclick="doLogin()" class="w-full bg-purple-900 hover:bg-purple-950 text-white py-3.5 rounded-xl font-semibold text-sm shadow-md active:scale-98 transition-all">
           Masuk ke Aplikasi
         </button>
-        <p class="text-center text-xs text-zinc-500 mt-5">Belum punya akun? <button onclick="view='register';render()" class="text-[#a48bc1] font-bold hover:underline">Daftar</button></p>
+        <p class="text-center text-xs text-zinc-500 mt-5">Belum punya akun? <button onclick="view='register';render()" class="text-purple-700 font-bold hover:underline">Daftar</button></p>
         <button onclick="view='gate';render()" class="w-full mt-4 text-xs text-zinc-400 text-center block hover:text-zinc-600">← Kembali ke Pilihan Akses</button>
       </div>
     </div>`;
@@ -648,17 +660,17 @@ function login() {
 
 function register() {
   return `
-    <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
-      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+    <div class="min-h-screen grid place-items-center p-6 bg-[#f7f3ee]">
+      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-xl shadow-purple-900/5 border border-zinc-100">
         <h2 class="serif text-3xl text-center mb-1">Buat Akun</h2>
         <p class="text-[10px] text-zinc-400 text-center mb-6 tracking-widest uppercase">Pendaftaran Pembeli • ${siteSettings.storeName}</p>
-        <input id="rn" placeholder="Nama Lengkap" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
-        <input id="re" type="email" placeholder="Email" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
-        <input id="rw" type="tel" placeholder="Nomor WhatsApp Aktif (cth: 08123456789)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
-        <textarea id="ra" placeholder="Alamat Lengkap" rows="2" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]"></textarea>
-        <input id="rp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-[#cbb6e2]">
-        <input id="rpc" type="password" placeholder="Konfirmasi Password" class="w-full border border-zinc-200 bg-[#faf6f3] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-[#cbb6e2]">
-        <button onclick="doReg()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">Daftar</button>
+        <input id="rn" placeholder="Nama Lengkap" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors">
+        <input id="re" type="email" placeholder="Email" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors">
+        <input id="rw" type="tel" placeholder="Nomor WhatsApp Aktif (cth: 08123456789)" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors">
+        <textarea id="ra" placeholder="Alamat Lengkap" rows="2" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors"></textarea>
+        <input id="rp" type="password" placeholder="Password" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-3 text-sm outline-none focus:border-purple-600 transition-colors">
+        <input id="rpc" type="password" placeholder="Konfirmasi Password" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3.5 rounded-xl mb-5 text-sm outline-none focus:border-purple-600 transition-colors">
+        <button onclick="doReg()" class="w-full bg-purple-900 hover:bg-purple-950 text-white py-3.5 rounded-xl font-semibold text-sm shadow-md active:scale-98 transition-all">Daftar</button>
         <button onclick="view='login';render()" class="w-full mt-4 text-xs text-zinc-500 text-center block hover:text-zinc-700">← Kembali ke Login Pembeli</button>
       </div>
     </div>`;
@@ -666,13 +678,13 @@ function register() {
 
 function loginAdmin() {
   return `
-    <div class="min-h-screen grid place-items-center p-6 bg-[#faf6f3]">
-      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-sm border border-zinc-100">
+    <div class="min-h-screen grid place-items-center p-6 bg-[#f7f3ee]">
+      <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-xl shadow-purple-900/5 border border-zinc-100">
         <h2 class="serif text-2xl text-center">Login Admin</h2>
         <p class="text-xs text-zinc-400 text-center mb-4">Akses khusus pengelola toko</p>
-        <input id="ae" type="email" placeholder="Email Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-3 text-sm bg-[#faf6f3]">
-        <input id="ap" type="password" placeholder="Password Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-4 text-sm bg-[#faf6f3]">
-        <button onclick="doLoginAdmin()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full text-sm font-medium shadow-md active:scale-98 transition-all">
+        <input id="ae" type="email" placeholder="Email Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-3 text-sm bg-[#f7f3ee]">
+        <input id="ap" type="password" placeholder="Password Admin" class="w-full border border-zinc-200 p-3.5 rounded-xl mb-4 text-sm bg-[#f7f3ee]">
+        <button onclick="doLoginAdmin()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-xl text-sm font-semibold shadow-md active:scale-98 transition-all">
           Masuk Dashboard Admin
         </button>
         <button onclick="view='gate';render()" class="w-full mt-4 text-xs text-zinc-400 text-center block hover:text-zinc-600">← Kembali ke Pilihan Akses</button>
@@ -817,7 +829,7 @@ function renderNav() {
       </button>
       <button onclick="openCart()" class="relative bg-black text-white w-11 h-11 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
         <span class="text-base">👜</span>
-        <span class="absolute -top-1 -right-1 bg-[#cbb6e2] text-white text-[10px] w-5 h-5 grid place-items-center rounded-full font-bold shadow-sm">
+        <span class="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] w-5 h-5 grid place-items-center rounded-full font-bold shadow-sm">
           ${cart.reduce((a,b)=>a+b.qty,0)}
         </span>
       </button>
@@ -862,7 +874,7 @@ function shop() {
   const totalPayment = Math.max(0, subtotal + finalShippingFee - voucherDisc);
 
   return `
-    <header class="w-full bg-[#faf6f3]/90 backdrop-blur sticky top-0 z-10 border-b border-zinc-100">
+    <header class="w-full bg-[#f7f3ee]/90 backdrop-blur sticky top-0 z-10 border-b border-zinc-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div>
           <h1 class="serif text-[26px] sm:text-3xl tracking-[0.18em] leading-none">${siteSettings.storeName}</h1>
@@ -893,15 +905,15 @@ function shop() {
       <div class="mt-6 bg-white rounded-[1.8rem] p-4 sm:p-8 shadow-sm">
         <div class="mb-5 max-w-xl">
           <div class="relative">
-            <input id="buyerSearchInput" type="text" value="${buyerSearchQuery}" oninput="buyerSearchQuery=this.value;render();focusBuyerSearch()" placeholder="Cari nama produk / kategori..." class="w-full bg-[#faf6f3] border border-zinc-200 px-4 py-3 rounded-full text-xs sm:text-sm font-medium outline-none focus:border-[#cbb6e2] transition-colors">
+            <input id="buyerSearchInput" type="text" value="${buyerSearchQuery}" oninput="buyerSearchQuery=this.value;render();focusBuyerSearch()" placeholder="Cari nama produk / kategori..." class="w-full bg-[#f7f3ee] border border-zinc-200 px-4 py-3 rounded-full text-xs sm:text-sm font-medium outline-none focus:border-purple-600 transition-colors">
             ${buyerSearchQuery ? `<button onclick="buyerSearchQuery='';render()" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
           </div>
         </div>
         <p class="font-semibold text-sm sm:text-base mb-3">Kategori Produk</p>
         <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-          <button onclick="filterCat='All';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat==='All' ? 'bg-[#cbb6e2] text-white font-medium shadow-sm' : 'bg-[#faf6f3] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">All</button>
+          <button onclick="filterCat='All';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat==='All' ? 'bg-purple-900 text-white font-medium shadow-sm' : 'bg-[#f7f3ee] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">All</button>
           ${categoriesList.map(c => `
-            <button onclick="filterCat='${c}';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat===c ? 'bg-[#cbb6e2] text-white font-medium shadow-sm' : 'bg-[#faf6f3] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">${c}</button>
+            <button onclick="filterCat='${c}';render()" class="whitespace-nowrap px-5 py-2 rounded-full text-xs sm:text-sm transition-all ${filterCat===c ? 'bg-purple-900 text-white font-medium shadow-sm' : 'bg-[#f7f3ee] text-zinc-600 border border-zinc-100 hover:bg-zinc-100'}">${c}</button>
           `).join('')}
         </div>
         <p class="font-semibold text-sm sm:text-base mt-6 mb-4">Katalog Pilihan ${buyerSearchQuery ? `<span class="text-xs font-normal text-zinc-500">(Hasil cari: "${buyerSearchQuery}")</span>` : ''}</p>
@@ -916,26 +928,26 @@ function shop() {
             const avgRating = pReviews.length > 0 ? (pReviews.reduce((sum, r) => sum + Number(r.rating), 0) / pReviews.length).toFixed(1) : null;
             const hasOldPrice = p.oldPrice && p.oldPrice > p.price;
             return `
-              <div class="bg-[#faf6f3] rounded-[1.3rem] p-3 sm:p-4 flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div class="bg-[#f7f3ee] rounded-[1.3rem] p-3 sm:p-4 flex flex-col justify-between hover:shadow-md transition-shadow">
                 <div>
                   <div class="relative cursor-pointer group overflow-hidden rounded-xl" onclick="handleProductClick(${p.id})">
                     <img src="${p.image}" class="w-full h-36 sm:h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105">
                     <div class="absolute top-2 right-2 flex flex-col items-end gap-1">
-                      <span class="bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold shadow-sm">
+                      <span class="bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold shadow-sm text-purple-950">
                         Rp ${(p.price/1000).toFixed(0)}k
                       </span>
                       ${hasOldPrice ? `<span class="bg-red-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold">~Rp ${(p.oldPrice/1000).toFixed(0)}k~</span>` : ''}
                     </div>
                     ${hasDetail ? `<span class="absolute bottom-2 left-2 bg-black/70 text-white text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-medium">✨ Multi Warna/Ukuran</span>` : ''}
                   </div>
-                  <p onclick="handleProductClick(${p.id})" class="text-[13px] sm:text-sm mt-3 font-semibold leading-tight line-clamp-1 cursor-pointer hover:text-[#a48bc1] transition-colors">${p.name}</p>
+                  <p onclick="handleProductClick(${p.id})" class="text-[13px] sm:text-sm mt-3 font-semibold leading-tight line-clamp-1 cursor-pointer hover:text-purple-700 transition-colors">${p.name}</p>
                   <div class="flex items-center justify-between text-[11px] sm:text-xs text-zinc-500 mt-1">
                     <span>${p.cat}</span>
                     ${avgRating ? `<span class="text-amber-600 font-bold">⭐ ${avgRating} (${pReviews.length})</span>` : ''}
                   </div>
                   <p class="text-[11px] text-zinc-400">${calculatedStock === 0 ? '<span class="text-red-500 font-semibold">Stok Habis</span>' : calculatedStock + ' stok'}</p>
                 </div>
-                <button ${calculatedStock === 0 ? 'disabled' : ''} onclick="handleProductClick(${p.id})" class="w-full mt-3 ${calculatedStock === 0 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' : 'bg-[#cbb6e2] hover:bg-[#b79ed1] text-white active:scale-95'} py-2.5 rounded-full text-[12px] sm:text-xs font-medium transition-all shadow-sm">
+                <button ${calculatedStock === 0 ? 'disabled' : ''} onclick="handleProductClick(${p.id})" class="w-full mt-3 ${calculatedStock === 0 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' : 'bg-purple-900 hover:bg-purple-950 text-white active:scale-95'} py-2.5 rounded-full text-[12px] sm:text-xs font-medium transition-all shadow-sm">
                   ${calculatedStock === 0 ? 'Habis' : (hasDetail ? 'Pilih Warna & Ukuran' : '+ Keranjang')}
                 </button>
               </div>
@@ -968,7 +980,7 @@ function shop() {
               const needSize = (!p.hasVariations) && catConfig && catConfig.hasSize && catConfig.sizes && catConfig.sizes.length > 0;
               const displayImg = c.selectedColorImg || p.image;
               return `
-                <div class="flex gap-3 bg-[#faf6f3] p-3 rounded-2xl items-center">
+                <div class="flex gap-3 bg-[#f7f3ee] p-3 rounded-2xl items-center">
                   <img src="${displayImg}" class="w-16 h-16 rounded-xl object-cover border border-zinc-200">
                   <div class="flex-1">
                     <p class="font-medium text-[13px] sm:text-sm leading-tight">${p.name}</p>
@@ -987,14 +999,14 @@ function shop() {
                     <div class="flex gap-2 mt-2 items-center">
                       <button onclick="qty(${index},-1)" class="w-6 h-6 bg-white rounded-full border border-zinc-200 flex items-center justify-center text-xs font-bold hover:bg-zinc-100">-</button>
                       <span class="text-xs font-semibold w-4 text-center">${c.qty}</span>
-                      <button onclick="qty(${index},1)" class="w-6 h-6 bg-[#cbb6e2] hover:bg-[#b79ed1] text-white rounded-full flex items-center justify-center text-xs font-bold">+</button>
+                      <button onclick="qty(${index},1)" class="w-6 h-6 bg-purple-900 hover:bg-purple-950 text-white rounded-full flex items-center justify-center text-xs font-bold">+</button>
                     </div>
                   </div>
                 </div>`;
             }).join('') || '<p class="text-sm text-center text-zinc-400 py-8">Keranjang Anda masih kosong.</p>'}
           </div>
           ${cart.length > 0 ? `
-            <div class="mt-6 bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200 space-y-3">
+            <div class="mt-6 bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-200 space-y-3">
               <p class="font-semibold text-xs text-zinc-800">🎟️ Masukkan Kode Voucher Diskon:</p>
               <div class="flex gap-2">
                 <input id="voucherCodeInput" type="text" placeholder="Contoh: JISH10K" value="${appliedVoucher ? appliedVoucher.code : ''}" class="flex-1 border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-bold uppercase outline-none focus:border-purple-600">
@@ -1002,19 +1014,19 @@ function shop() {
               </div>
               ${appliedVoucher ? `<div class="flex justify-between items-center bg-purple-100 text-purple-900 p-2.5 rounded-xl text-xs font-bold"><span>Voucher ${appliedVoucher.code} Aktif (-Rp ${appliedVoucher.discount.toLocaleString('id-ID')})</span><button onclick="removeVoucher()" class="text-red-600">✕ Hapus</button></div>` : ''}
             </div>
-            <div class="mt-4 bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200">
+            <div class="mt-4 bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-200">
               <p class="font-semibold text-xs text-zinc-800 mb-2">📦 Pilih Opsi Penyerahan Barang:</p>
               <div class="space-y-2 text-xs">
                 <label class="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer">
                   <div class="flex items-center gap-2">
-                    <input type="radio" name="deliveryOption" value="${deliverySettings.deliveryLabel}" ${deliverySettings.selectedMethod === deliverySettings.deliveryLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-[#cbb6e2]">
+                    <input type="radio" name="deliveryOption" value="${deliverySettings.deliveryLabel}" ${deliverySettings.selectedMethod === deliverySettings.deliveryLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-purple-900">
                     <span class="font-medium text-zinc-700">${deliverySettings.deliveryLabel}</span>
                   </div>
                   <span class="text-zinc-500 font-semibold">Disesuaikan Wilayah</span>
                 </label>
                 <label class="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer">
                   <div class="flex items-center gap-2">
-                    <input type="radio" name="deliveryOption" value="${deliverySettings.pickupLabel}" ${deliverySettings.selectedMethod === deliverySettings.pickupLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-[#cbb6e2]">
+                    <input type="radio" name="deliveryOption" value="${deliverySettings.pickupLabel}" ${deliverySettings.selectedMethod === deliverySettings.pickupLabel ? 'checked' : ''} onchange="setDeliveryMethod(this.value)" class="accent-purple-900">
                     <span class="font-medium text-zinc-700">${deliverySettings.pickupLabel}</span>
                   </div>
                   <span class="text-green-600 font-semibold">Gratis (Rp 0)</span>
@@ -1054,7 +1066,7 @@ function shop() {
         </div>
         <div class="mt-6 border-t pt-4">
           ${cart.length > 0 ? `
-            <div class="bg-[#f3ebf7] p-4 rounded-2xl text-xs space-y-2">
+            <div class="bg-purple-50/50 p-4 rounded-2xl text-xs space-y-2 border border-purple-100">
               <div class="flex justify-between text-zinc-600">
                 <span>Subtotal Produk (${totalItemQty} item)</span>
                 <span class="font-semibold text-zinc-800">Rp ${subtotal.toLocaleString('id-ID')}</span>
@@ -1074,10 +1086,10 @@ function shop() {
               ${appliedVoucher ? `<div class="flex justify-between text-purple-700 font-semibold"><span>Diskon Voucher (${appliedVoucher.code})</span><span>- Rp ${appliedVoucher.discount.toLocaleString('id-ID')}</span></div>` : ''}
               <div class="flex justify-between text-sm font-bold text-zinc-900 pt-1">
                 <span>Total Pembayaran</span>
-                <span class="text-[#8857b5]">Rp ${totalPayment.toLocaleString('id-ID')}</span>
+                <span class="text-purple-900">Rp ${totalPayment.toLocaleString('id-ID')}</span>
               </div>
             </div>
-            <button onclick="checkout()" class="w-full mt-4 bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-semibold shadow-md active:scale-98 transition-all">
+            <button onclick="checkout()" class="w-full mt-4 bg-purple-900 hover:bg-purple-950 text-white py-3.5 rounded-2xl font-semibold shadow-md active:scale-98 transition-all">
               Checkout via WhatsApp
             </button>
           ` : ''}
@@ -1159,7 +1171,7 @@ function renderProductDetailContent() {
     <div class="text-center">
       <img id="detailMainImg" src="${displayImage}" class="w-full h-64 object-cover rounded-2xl shadow-sm border border-zinc-200 mb-4">
       <h3 class="serif text-2xl font-bold text-zinc-900 leading-tight">${p.name}</h3>
-      <p class="text-xs text-zinc-500 font-semibold mt-1">${p.cat} • <span class="text-[#8857b5] font-bold text-sm">Rp ${p.price.toLocaleString('id-ID')}</span> ${p.oldPrice ? `<span class="line-through text-zinc-400 text-xs ml-1">Rp ${p.oldPrice.toLocaleString('id-ID')}</span>` : ''}</p>
+      <p class="text-xs text-zinc-500 font-semibold mt-1">${p.cat} • <span class="text-purple-900 font-bold text-sm">Rp ${p.price.toLocaleString('id-ID')}</span> ${p.oldPrice ? `<span class="line-through text-zinc-400 text-xs ml-1">Rp ${p.oldPrice.toLocaleString('id-ID')}</span>` : ''}</p>
     </div>
     ${hasDetail ? `
       <div class="mt-5">
@@ -1197,7 +1209,7 @@ function renderProductDetailContent() {
         <span class="text-[10px] text-zinc-400 block font-semibold">Sisa Stok Pilihan:</span>
         <span class="text-xs font-bold ${currentStock > 0 ? 'text-emerald-600' : 'text-red-500'}">${currentStock > 0 ? currentStock + ' Pcs' : 'Stok Kosong'}</span>
       </div>
-      <button ${currentStock <= 0 ? 'disabled' : ''} onclick="confirmAddToCartFromDetail()" class="flex-1 ${currentStock <= 0 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' : 'bg-[#cbb6e2] hover:bg-[#b79ed1] text-white'} py-3.5 rounded-full font-bold text-xs shadow-md active:scale-95 transition-all">
+      <button ${currentStock <= 0 ? 'disabled' : ''} onclick="confirmAddToCartFromDetail()" class="flex-1 ${currentStock <= 0 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' : 'bg-purple-900 hover:bg-purple-950 text-white'} py-3.5 rounded-full font-bold text-xs shadow-md active:scale-95 transition-all">
         ${currentStock <= 0 ? 'Stok Habis' : '🛒 Tambahkan ke Keranjang'}
       </button>
     </div>
@@ -1205,7 +1217,7 @@ function renderProductDetailContent() {
       <h4 class="font-bold text-xs text-zinc-900 mb-2">⭐ Ulasan & Penilaian Pembeli (${pReviews.length})</h4>
       <div class="space-y-2 max-h-40 overflow-y-auto no-scrollbar">
         ${pReviews.length > 0 ? pReviews.map(r => `
-          <div class="p-2.5 bg-[#faf6f3] rounded-xl border border-zinc-200/60 text-xs">
+          <div class="p-2.5 bg-[#f7f3ee] rounded-xl border border-zinc-200/60 text-xs">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-zinc-900">${r.buyerName}</span>
               <span class="text-amber-500 font-bold">${'⭐'.repeat(r.rating)}</span>
@@ -1435,7 +1447,7 @@ function history() {
                 }">${o.status}</span>
               </div>
               ${o.status !== 'Dibatalkan' ? `
-                <div class="flex items-center justify-between px-2 py-3 bg-[#faf6f3] rounded-xl text-[10px] font-bold">
+                <div class="flex items-center justify-between px-2 py-3 bg-[#f7f3ee] rounded-xl text-[10px] font-bold">
                   <div class="flex flex-col items-center ${currentStepIdx >= 0 ? 'text-purple-700' : 'text-zinc-400'}">
                     <span class="w-6 h-6 rounded-full ${currentStepIdx >= 0 ? 'bg-purple-600 text-white' : 'bg-zinc-200 text-zinc-500'} grid place-items-center mb-1">1</span> Diproses
                   </div>
@@ -1454,8 +1466,8 @@ function history() {
                 </div>
               ` : ''}
               <p class="text-[13px] sm:text-base font-semibold text-zinc-800">${o.text}</p>
-              <p class="text-xs sm:text-sm text-[#a48bc1] font-semibold">📍 Opsi: ${o.deliveryMethod || 'Diantarkan/Pickup'}</p>
-              <div class="bg-[#faf6f3] p-3 rounded-xl text-xs text-zinc-600 space-y-1">
+              <p class="text-xs sm:text-sm text-purple-800 font-semibold">📍 Opsi: ${o.deliveryMethod || 'Diantarkan/Pickup'}</p>
+              <div class="bg-[#f7f3ee] p-3 rounded-xl text-xs text-zinc-600 space-y-1">
                 <div class="flex justify-between"><span>Subtotal Barang:</span><span>Rp ${(o.subtotal || o.total).toLocaleString('id-ID')}</span></div>
                 <div class="flex justify-between"><span>Biaya Ongkir:</span><span>Rp ${(o.rawShippingFee ?? o.shippingFee ?? 0).toLocaleString('id-ID')}</span></div>
                 ${o.shippingDiscount > 0 ? `
@@ -1567,7 +1579,7 @@ function chatBuyer() {
         <div id="chatBoxBuyer" class="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar">
           ${myChats.length > 0 ? myChats.map(m => `
             <div class="flex flex-col ${m.sender === 'buyer' ? 'items-end' : 'items-start'}">
-              <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'buyer' ? 'bg-[#cbb6e2] text-white rounded-br-none' : 'bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
+              <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'buyer' ? 'bg-purple-900 text-white rounded-br-none' : 'bg-[#f7f3ee] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
                 <p>${m.text}</p>
                 <span class="text-[9px] opacity-75 mt-1 block text-right">${m.time}</span>
               </div>
@@ -1581,7 +1593,7 @@ function chatBuyer() {
           `}
         </div>
         <div class="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
-          <input id="buyerChatInput" type="text" placeholder="Tulis pesan..." onkeypress="if(event.key==='Enter') sendBuyerChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
+          <input id="buyerChatInput" type="text" placeholder="Tulis pesan..." onkeypress="if(event.key==='Enter') sendBuyerChat()" class="flex-1 border border-zinc-200 bg-[#f7f3ee] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-600">
           <button onclick="sendBuyerChat()" class="bg-black hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95">Kirim</button>
         </div>
       </div>
@@ -1608,7 +1620,7 @@ function sendBuyerChat() {
     }
     chatBox.innerHTML += `
       <div class="flex flex-col items-end">
-        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#cbb6e2] text-white rounded-br-none">
+        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-purple-900 text-white rounded-br-none">
           <p>${newMsg.text}</p>
           <span class="text-[9px] opacity-75 mt-1 block text-right">${newMsg.time}</span>
         </div>
@@ -1772,7 +1784,7 @@ function admin() {
               </div>
               <div>
                 <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Barang *</label>
-                <input id="tp_name" placeholder="Contoh: Jaket Irjan Vintage" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+                <input id="tp_name" placeholder="Contoh: Jaket Irjan Vintage" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="bg-amber-50/60 p-3 rounded-2xl border border-amber-200/60">
@@ -1791,14 +1803,14 @@ function admin() {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="text-xs font-bold text-zinc-700 block mb-1">Stok Utama</label>
-                  <input id="tp_stock" type="number" placeholder="Contoh: 5" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-semibold outline-none focus:border-black disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed">
+                  <input id="tp_stock" type="number" placeholder="Contoh: 5" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-semibold outline-none focus:border-black disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed">
                 </div>
                 <div>
                   <label class="text-xs font-bold text-zinc-700 block mb-1">Kategori Produk</label>
-                  <input id="tp_cat" placeholder="Contoh: Elektronik, Makanan" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+                  <input id="tp_cat" placeholder="Contoh: Elektronik, Makanan" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
                 </div>
               </div>
-              <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/60">
+              <div class="p-4 bg-[#f7f3ee] rounded-2xl border border-zinc-200/60">
                 <label class="text-xs font-bold text-zinc-700 block mb-1">Foto Sampul Utama Barang</label>
                 <input type="file" id="tp_file" accept="image/*" onchange="previewAndCompressTpMainImage(this)" class="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800">
                 <img id="tp_preview" class="w-24 h-24 rounded-2xl hidden object-cover mt-3 border border-zinc-200 shadow-sm">
@@ -1837,7 +1849,7 @@ function admin() {
                 <p class="text-xs text-zinc-400 mt-0.5">Barang dikelompokkan secara otomatis berdasarkan nama toko supplier.</p>
               </div>
               <div class="relative w-full sm:w-64">
-                <input id="tpSearchInput" type="text" value="${searchTpStoreQuery}" oninput="searchTpStoreQuery=this.value;render();focusTpSearch()" placeholder="🔍 Cari nama toko supplier..." class="w-full bg-[#faf6f3] border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500 transition-colors">
+                <input id="tpSearchInput" type="text" value="${searchTpStoreQuery}" oninput="searchTpStoreQuery=this.value;render();focusTpSearch()" placeholder="🔍 Cari nama toko supplier..." class="w-full bg-[#f7f3ee] border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500 transition-colors">
                 ${searchTpStoreQuery ? `<button onclick="searchTpStoreQuery='';render()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-zinc-700">✕</button>` : ''}
               </div>
             </div>
@@ -1864,7 +1876,7 @@ function admin() {
                     return p.name.toLowerCase().includes(itemQuery) || (p.cat && p.cat.toLowerCase().includes(itemQuery));
                   });
                   return `
-                    <div class="bg-[#faf6f3] rounded-2xl border border-purple-200/80 overflow-hidden shadow-sm">
+                    <div class="bg-[#f7f3ee] rounded-2xl border border-purple-200/80 overflow-hidden shadow-sm">
                       <div class="bg-purple-100/70 p-4 border-b border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <div class="flex items-center gap-2">
@@ -1914,7 +1926,7 @@ function admin() {
                                 </div>
                                 <div class="flex items-center gap-1.5 self-end sm:self-center">
                                   <button onclick="openRestockModal(${p.id})" class="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl border border-purple-200 font-bold text-xs transition-colors" title="Restock">📦 Restock</button>
-                                  <button onclick="editTpProduct(${p.id})" class="p-2 bg-white text-[#a48bc1] hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Edit">✏️ Edit</button>
+                                  <button onclick="editTpProduct(${p.id})" class="p-2 bg-white text-purple-700 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Edit">✏️ Edit</button>
                                   <button onclick="deleteTpProduct(${p.id})" class="p-2 bg-white text-red-500 hover:bg-zinc-50 rounded-xl border border-zinc-200 font-bold text-xs transition-colors" title="Hapus">🗑️</button>
                                 </div>
                               </div>
@@ -1947,7 +1959,7 @@ function admin() {
                   const lastBuyerMsg = chatMessages.filter(c => c.buyerEmail === b.email).pop();
                   const hasUnread = lastBuyerMsg && lastBuyerMsg.sender === 'buyer';
                   return `
-                    <div class="p-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-purple-500 bg-purple-50/50' : (hasUnread ? 'border-red-300 bg-red-50/40 shadow-sm' : 'border-zinc-100 bg-[#faf6f3] hover:border-zinc-300')}" onclick="selectedAdminChatEmail='${b.email}';render();">
+                    <div class="p-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-purple-500 bg-purple-50/50' : (hasUnread ? 'border-red-300 bg-red-50/40 shadow-sm' : 'border-zinc-100 bg-[#f7f3ee] hover:border-zinc-300')}" onclick="selectedAdminChatEmail='${b.email}';render();">
                       <div class="flex justify-between items-start">
                         <div>
                           <div class="flex items-center gap-1.5">
@@ -1988,7 +2000,7 @@ function admin() {
                   <div id="adminChatBox" class="h-[42vh] overflow-y-auto space-y-3 pr-2 no-scrollbar">
                     ${chatList.length > 0 ? chatList.map(m => `
                       <div class="flex flex-col ${m.sender === 'admin' ? 'items-end' : 'items-start'}">
-                        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'admin' ? 'bg-black text-white rounded-br-none' : 'bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
+                        <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm ${m.sender === 'admin' ? 'bg-black text-white rounded-br-none' : 'bg-[#f7f3ee] text-zinc-800 border border-zinc-200 rounded-bl-none'}">
                           <p>${m.text}</p>
                           <span class="text-[9px] opacity-75 mt-1 block text-right">${m.time}</span>
                         </div>
@@ -2002,7 +2014,7 @@ function admin() {
                   </div>
                 </div>
                 <div class="pt-3 border-t flex gap-2">
-                  <input id="adminChatInput" type="text" placeholder="Tulis balasan pesan..." onkeypress="if(event.key==='Enter') sendAdminChat()" class="flex-1 border border-zinc-200 bg-[#faf6f3] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
+                  <input id="adminChatInput" type="text" placeholder="Tulis balasan pesan..." onkeypress="if(event.key==='Enter') sendAdminChat()" class="flex-1 border border-zinc-200 bg-[#f7f3ee] px-4 py-2.5 rounded-full text-xs font-medium outline-none focus:border-purple-400">
                   <button onclick="sendAdminChat()" class="bg-black hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95">Kirim</button>
                 </div>
               `;
@@ -2026,7 +2038,7 @@ function admin() {
               <p class="text-xs text-zinc-400 mt-0.5">Kelola alur status pesanan, kurir, cetak resi alamat, dan konfirmasi WhatsApp.</p>
             </div>
           </div>
-          <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200/80 mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div class="bg-[#f7f3ee] p-4 rounded-2xl border border-zinc-200/80 mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div class="w-full sm:w-72 relative">
               <input id="orderSearchInput" type="text" value="${orderSearchQuery}" oninput="orderSearchQuery=this.value;render();focusOrderSearch()" placeholder="🔍 Cari nama pembeli / Order ID..." class="w-full bg-white border border-zinc-200 pl-8 pr-8 py-2 rounded-xl text-xs font-medium outline-none focus:border-purple-500">
               <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs">🔎</span>
@@ -2074,7 +2086,7 @@ function admin() {
                 const isExpanded = !!expandedOrders[o.id];
                 const isPickup = o.deliveryMethod && o.deliveryMethod.includes(deliverySettings.pickupLabel);
                 return `
-                  <div class="bg-[#faf6f3] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 shadow-sm space-y-3">
+                  <div class="bg-[#f7f3ee] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 shadow-sm space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
                       <div>
                         <div class="flex items-center gap-2">
@@ -2243,14 +2255,14 @@ function admin() {
                 <h3 class="font-bold text-base text-zinc-900">💸 Catat Pengeluaran Operasional</h3>
                 <p class="text-xs text-zinc-400 mt-0.5">Catat biaya operasional toko seperti bensin kurir, packaging, listrik, dll.</p>
               </div>
-              <input id="exp_title" placeholder="Keterangan Pengeluaran (Cth: Bensin Kurir)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs outline-none">
-              <input id="exp_amount" type="number" placeholder="Nominal Biaya (Rp)" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-red-600 outline-none">
+              <input id="exp_title" placeholder="Keterangan Pengeluaran (Cth: Bensin Kurir)" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs outline-none">
+              <input id="exp_amount" type="number" placeholder="Nominal Biaya (Rp)" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-bold text-red-600 outline-none">
               <button onclick="saveExpense()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-2xl text-xs font-bold shadow-md transition-all">
                 Simpan Pengeluaran
               </button>
               <div class="space-y-2 max-h-48 overflow-y-auto no-scrollbar pt-2">
                 ${operationalExpenses.map(exp => `
-                  <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
+                  <div class="p-3 bg-[#f7f3ee] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
                     <div>
                       <p class="font-bold text-zinc-900">${exp.title}</p>
                       <span class="text-[10px] text-zinc-400">${exp.date}</span>
@@ -2270,7 +2282,7 @@ function admin() {
               </div>
               <div class="space-y-2 max-h-72 overflow-y-auto no-scrollbar">
                 ${stockRestockLogs.map(log => `
-                  <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
+                  <div class="p-3 bg-[#f7f3ee] rounded-2xl border border-zinc-200/60 flex justify-between items-center text-xs">
                     <div>
                       <p class="font-bold text-zinc-900">${log.productName}</p>
                       <span class="text-[10px] text-zinc-400">${log.date}</span>
@@ -2294,11 +2306,11 @@ function admin() {
             </div>
             <div>
               <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Pengiriman Ke Alamat</label>
-              <input id="del_label" value="${deliverySettings.deliveryLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+              <input id="del_label" value="${deliverySettings.deliveryLabel}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
             </div>
             <div>
               <label class="text-xs font-bold text-zinc-700 block mb-1">Label Opsi Ambil Sendiri di Toko</label>
-              <input id="pickup_label" value="${deliverySettings.pickupLabel}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+              <input id="pickup_label" value="${deliverySettings.pickupLabel}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
             </div>
 
             <!-- PENGATURAN ZONA KECAMATAN / WILAYAH ONGKIR -->
@@ -2345,7 +2357,7 @@ function admin() {
               </div>
               <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2.5 py-1 rounded-full">${couriers.length} Kurir</span>
             </div>
-            <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80 space-y-3">
+            <div class="p-4 bg-[#f7f3ee] rounded-2xl border border-zinc-200/80 space-y-3">
               <h4 class="font-bold text-xs text-zinc-800">${editCourierId ? '✏️ Edit Kurir' : '➕ Tambah Kurir Baru'}</h4>
               <input id="c_name" placeholder="Nama Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
               <input id="c_phone" placeholder="Nomor WhatsApp Kurir" class="w-full border border-zinc-200 bg-white p-2.5 rounded-xl text-xs font-medium outline-none">
@@ -2363,7 +2375,7 @@ function admin() {
             </div>
             <div class="space-y-2 max-h-60 overflow-y-auto no-scrollbar pr-1">
               ${couriers.map(cr => `
-                <div class="p-3 bg-[#faf6f3] rounded-2xl border border-zinc-200/60 flex items-center justify-between gap-3">
+                <div class="p-3 bg-[#f7f3ee] rounded-2xl border border-zinc-200/60 flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3">
                     <img src="${cr.photo}" class="w-10 h-10 rounded-full object-cover border border-zinc-300">
                     <div>
@@ -2388,19 +2400,19 @@ function admin() {
           <h3 class="font-bold text-base text-zinc-900 border-b pb-3">🎨 Pengaturan Tampilan & Banner Multi-Foto Toko</h3>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Nama Toko Utama</label>
-            <input id="st_name" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
+            <input id="st_name" value="${siteSettings.storeName}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-bold outline-none focus:border-black">
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 1</label>
-            <input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="st_t1" value="${siteSettings.bannerTitle1}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Judul Banner Baris 2</label>
-            <input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="st_t2" value="${siteSettings.bannerTitle2}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Singkat Banner</label>
-            <input id="st_desc" value="${siteSettings.bannerDesc}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="st_desc" value="${siteSettings.bannerDesc}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
 
           <!-- PENGATURAN ETALASE DI HALAMAN GATE -->
@@ -2450,7 +2462,7 @@ function admin() {
               </div>
             </div>
           </div>
-          <div class="p-4 bg-[#faf6f3] rounded-2xl border border-zinc-200/80 space-y-3">
+          <div class="p-4 bg-[#f7f3ee] rounded-2xl border border-zinc-200/80 space-y-3">
             <div class="flex justify-between items-center">
               <div>
                 <span class="text-xs font-bold text-zinc-900 block">🖼️ Galeri Foto Banner (${(siteSettings.bannerImages || []).length} Foto)</span>
@@ -2493,16 +2505,16 @@ function admin() {
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Nomor WhatsApp Utama Toko (Tampil di Struk) *</label>
-            <input id="adm_wa" value="${adminAccount.phone || ''}" placeholder="6281234567890" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-bold text-purple-950 outline-none focus:border-black">
+            <input id="adm_wa" value="${adminAccount.phone || ''}" placeholder="6281234567890" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-bold text-purple-950 outline-none focus:border-black">
             <p class="text-[10px] text-zinc-400 mt-1">Gunakan format angka tanpa tanda + (contoh: 6281234567890)</p>
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">📍 Alamat Lengkap Admin / Toko (Tampil di Struk Cetak) *</label>
-            <textarea id="adm_address" rows="3" placeholder="Masukkan alamat lengkap toko..." class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">${adminAccount.address || ''}</textarea>
+            <textarea id="adm_address" rows="3" placeholder="Masukkan alamat lengkap toko..." class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">${adminAccount.address || ''}</textarea>
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Email Login Admin *</label>
-            <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="adm_email" type="email" value="${adminAccount.email}" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
           <div class="pt-2 border-t border-zinc-100">
             <label class="text-xs font-bold text-red-600 block mb-1">Password / Kode Lama Admin *</label>
@@ -2510,11 +2522,11 @@ function admin() {
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Password Baru Admin *</label>
-            <input id="adm_pass" type="password" placeholder="Masukkan password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="adm_pass" type="password" placeholder="Masukkan password baru" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
           <div>
             <label class="text-xs font-bold text-zinc-700 block mb-1">Konfirmasi Password Baru Admin *</label>
-            <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
+            <input id="adm_confirm_pass" type="password" placeholder="Ulangi password baru" class="w-full border border-zinc-200 bg-[#f7f3ee] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
           <button onclick="handleSaveAdminSettings()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98">
             💾 Simpan Pengaturan Akun Admin
@@ -3061,7 +3073,7 @@ function openCourierModal(orderId) {
     listContainer.innerHTML = couriers.map(cr => {
       const isChecked = selectedCourierIdInModal === cr.id;
       return `
-        <label class="flex items-center justify-between p-3 rounded-2xl border ${isChecked ? 'border-purple-600 bg-purple-50' : 'border-zinc-200 bg-[#faf6f3]'} cursor-pointer hover:border-purple-300 transition-all">
+        <label class="flex items-center justify-between p-3 rounded-2xl border ${isChecked ? 'border-purple-600 bg-purple-50' : 'border-zinc-200 bg-[#f7f3ee]'} cursor-pointer hover:border-purple-300 transition-all">
           <div class="flex items-center gap-3">
             <input type="radio" name="modalCourierSelect" value="${cr.id}" ${isChecked ? 'checked' : ''} onchange="selectedCourierIdInModal=${cr.id}" class="accent-purple-800">
             <img src="${cr.photo}" class="w-9 h-9 rounded-full object-cover border border-zinc-300">
@@ -3443,7 +3455,7 @@ function renderColorList(type, colorsArray) {
   listContainer.innerHTML = colorsArray.map((c, cIdx) => `
     <div class="p-3 bg-white rounded-2xl border border-purple-200 space-y-2">
       <div class="flex justify-between items-center gap-2">
-        <input type="text" value="${c.name}" placeholder="Nama Warna (cth: Merah)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].name=this.value" class="flex-1 border border-zinc-200 bg-[#faf6f3] p-2 rounded-xl text-xs font-bold outline-none">
+        <input type="text" value="${c.name}" placeholder="Nama Warna (cth: Merah)" onchange="${type === 'main' ? 'tempProductColors' : 'tempTpProductColors'}[${cIdx}].name=this.value" class="flex-1 border border-zinc-200 bg-[#f7f3ee] p-2 rounded-xl text-xs font-bold outline-none">
         <button onclick="removeColorVariation('${type}', ${cIdx})" class="text-red-500 hover:text-red-700 font-bold text-xs p-1">🗑️</button>
       </div>
       <div class="flex items-center gap-2">
@@ -3648,7 +3660,7 @@ onValue(ref(db, 'app_data'), (snapshot) => {
             }
             adminChatBox.innerHTML += `
               <div class="flex flex-col items-start">
-                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#f7f3ee] text-zinc-800 border border-zinc-200 rounded-bl-none">
                   <p>${latestMsg.text}</p>
                   <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
                 </div>
@@ -3671,7 +3683,7 @@ onValue(ref(db, 'app_data'), (snapshot) => {
             }
             buyerChatBox.innerHTML += `
               <div class="flex flex-col items-start">
-                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#faf6f3] text-zinc-800 border border-zinc-200 rounded-bl-none">
+                <div class="max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm bg-[#f7f3ee] text-zinc-800 border border-zinc-200 rounded-bl-none">
                   <p>${latestMsg.text}</p>
                   <span class="text-[9px] opacity-75 mt-1 block text-right">${latestMsg.time}</span>
                 </div>
