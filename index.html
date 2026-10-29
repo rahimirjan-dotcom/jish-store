@@ -180,32 +180,19 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
   </div>
 </div>
 
-<!-- Modal Tulis Ulasan Pembeli -->
+<!-- Modal Tulis Ulasan Pembeli Multi-Barang -->
 <div id="reviewModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
-  <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-zinc-100">
+  <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-100 max-h-[85vh] overflow-y-auto">
     <div class="flex justify-between items-center pb-3 border-b mb-3">
-      <h3 class="font-bold text-sm text-zinc-900">⭐ Berikan Ulasan Produk</h3>
+      <h3 class="font-bold text-sm text-zinc-900">⭐ Berikan Ulasan Pesanan</h3>
       <button onclick="closeReviewModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
     </div>
-    <div class="space-y-3">
-      <input type="hidden" id="reviewProductId">
-      <input type="hidden" id="reviewOrderId">
-      <div>
-        <label class="text-xs font-bold text-zinc-700 block mb-1">Rating Bintang (1 - 5):</label>
-        <select id="reviewRating" class="w-full text-xs p-2.5 rounded-xl border border-zinc-200 bg-[#f7f3ee] font-bold outline-none">
-          <option value="5">⭐⭐⭐⭐⭐ (5 - Sangat Memuaskan)</option>
-          <option value="4">⭐⭐⭐⭐ (4 - Puas)</option>
-          <option value="3">⭐⭐⭐ (3 - Cukup)</option>
-          <option value="2">⭐⭐ (2 - Kurang)</option>
-          <option value="1">⭐ (1 - Buruk)</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-xs font-bold text-zinc-700 block mb-1">Komentar & Ulasan Anda:</label>
-        <textarea id="reviewComment" rows="3" placeholder="Ceritakan pengalaman produk ini..." class="w-full text-xs p-3 rounded-xl border border-zinc-200 bg-[#f7f3ee] outline-none"></textarea>
-      </div>
-      <button onclick="submitProductReview()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-xl text-xs font-bold shadow-md transition-all">Kirim Ulasan</button>
-    </div>
+    <input type="hidden" id="reviewOrderId">
+    <!-- Kontainer Daftar Barang yang Akan Diulas secara Dinamis -->
+    <div id="reviewItemsContainer" class="space-y-4 mb-4"></div>
+    <button onclick="submitProductReview()" class="w-full bg-black hover:bg-zinc-800 text-white py-3 rounded-xl text-xs font-bold shadow-md transition-all">
+      Kirim Semua Ulasan
+    </button>
   </div>
 </div>
 
@@ -1524,11 +1511,30 @@ function buyerConfirmOrder(orderId) {
 function openReviewModalForOrder(orderId) {
   const o = orders.find(x => x.id === orderId);
   if (!o || !o.items || o.items.length === 0) return;
-  const firstItem = o.items[0];
-  document.getElementById('reviewProductId').value = firstItem.id;
+
   document.getElementById('reviewOrderId').value = o.id;
-  document.getElementById('reviewRating').value = '5';
-  document.getElementById('reviewComment').value = '';
+  const container = document.getElementById('reviewItemsContainer');
+  
+  // Membuat form ulasan secara dinamis untuk setiap item/barang dalam pesanan
+  container.innerHTML = o.items.map((item, index) => `
+    <div class="p-3 bg-[#f7f3ee] rounded-2xl border border-zinc-200/80 space-y-2 text-xs" data-product-id="${item.id}">
+      <p class="font-bold text-zinc-900">${index + 1}. ${item.name} ${item.color ? '['+item.color+']' : ''} ${item.size ? '[Uk: '+item.size+']' : ''}</p>
+      <div>
+        <label class="text-[10px] font-bold text-zinc-600 block mb-1">Rating Bintang:</label>
+        <select class="review-rating-select w-full text-xs p-2 rounded-xl border border-zinc-200 bg-white font-bold outline-none">
+          <option value="5">⭐⭐⭐⭐⭐ (5 - Sangat Memuaskan)</option>
+          <option value="4">⭐⭐⭐⭐ (4 - Puas)</option>
+          <option value="3">⭐⭐⭐ (3 - Cukup)</option>
+          <option value="2">⭐⭐ (2 - Kurang)</option>
+          <option value="1">⭐ (1 - Buruk)</option>
+        </select>
+      </div>
+      <div>
+        <textarea class="review-comment-input w-full text-xs p-2.5 rounded-xl border border-zinc-200 bg-white outline-none" rows="2" placeholder="Tuliskan ulasan untuk produk ini..."></textarea>
+      </div>
+    </div>
+  `).join('');
+
   document.getElementById('reviewModal').classList.remove('hidden');
 }
 
@@ -1537,30 +1543,44 @@ function closeReviewModal() {
 }
 
 function submitProductReview() {
-  const productId = Number(document.getElementById('reviewProductId').value);
   const orderId = Number(document.getElementById('reviewOrderId').value);
-  const rating = Number(document.getElementById('reviewRating').value);
-  const comment = document.getElementById('reviewComment').value.trim();
-  if (!comment) return showToast('Tuliskan komentar ulasan Anda!');
-  const existingReview = productReviews.find(r => r.productId === productId && r.buyerEmail === (currentBuyer ? currentBuyer.email : '') && r.orderId === orderId);
-  if (existingReview) {
-    closeReviewModal();
-    return showToast('Anda sudah memberikan ulasan untuk produk dari pesanan ini!');
-  }
-  productReviews.push({
-    id: Date.now(),
-    productId: productId,
-    orderId: orderId,
-    buyerEmail: currentBuyer ? currentBuyer.email : '',
-    buyerName: currentBuyer ? currentBuyer.name : 'Pelanggan',
-    rating: rating,
-    comment: comment,
-    date: new Date().toLocaleDateString('id-ID')
+  const itemCards = document.querySelectorAll('#reviewItemsContainer > div');
+  
+  if (itemCards.length === 0) return;
+
+  let addedCount = 0;
+  itemCards.forEach(card => {
+    const productId = Number(card.getAttribute('data-product-id'));
+    const rating = Number(card.querySelector('.review-rating-select').value);
+    const comment = card.querySelector('.review-comment-input').value.trim();
+
+    // Hanya simpan jika kolom komentar diisi oleh pembeli
+    if (comment) {
+      const existing = productReviews.find(r => r.productId === productId && r.buyerEmail === (currentBuyer ? currentBuyer.email : '') && r.orderId === orderId);
+      if (!existing) {
+        productReviews.push({
+          id: Date.now() + Math.random(),
+          productId: productId,
+          orderId: orderId,
+          buyerEmail: currentBuyer ? currentBuyer.email : '',
+          buyerName: currentBuyer ? currentBuyer.name : 'Pelanggan',
+          rating: rating,
+          comment: comment,
+          date: new Date().toLocaleDateString('id-ID')
+        });
+        addedCount++;
+      }
+    }
   });
+
+  if (addedCount === 0) {
+    return showToast('Mohon tuliskan komentar ulasan minimal untuk salah satu produk!');
+  }
+
   save();
   closeReviewModal();
   render();
-  showToast('Terima kasih! Ulasan berhasil dikirim.');
+  showToast(`Berhasil mengirimkan ulasan untuk ${addedCount} produk!`);
 }
 
 // --- CHAT PEMBELI ---
