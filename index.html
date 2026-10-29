@@ -8,6 +8,10 @@
 <!-- Pustaka JSZip & FileSaver.js untuk Backup & Restore Lengkap dengan Gambar -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- Pustaka QR Code generator untuk Resi -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Pustaka html5-qrcode untuk pemindai kamera aktif -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 .serif { font-family: 'Instrument Serif', serif; }
@@ -35,6 +39,66 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
 <!-- Hidden Printable Containers -->
 <div id="printableReceipt" class="hidden"></div>
 <div id="printableAddressLabel" class="hidden"></div>
+
+<!-- Modal Scanner & Detail Pesanan (Scan Result) -->
+<div id="scanModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] p-4 flex items-center justify-center">
+  <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-zinc-100 max-h-[90vh] overflow-y-auto relative">
+    <div class="flex justify-between items-center pb-3 border-b mb-4">
+      <h3 class="font-bold text-base text-zinc-900">📷 Scan Barcode / QR Resi Pembeli</h3>
+      <button onclick="closeScanModal()" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">✕</button>
+    </div>
+    <!-- Area Kamera / Scanner Aktif -->
+    <div id="scannerCameraContainer" class="space-y-4">
+      <div class="bg-zinc-900 rounded-2xl p-4 text-center text-white relative overflow-hidden flex flex-col items-center justify-center">
+        <p class="text-xs text-zinc-400 mb-2">Arahkan kamera ke QR Code pada resi pembeli</p>
+        <!-- KONTAINER VIDEO KAMERA HTML5-QRCODE -->
+        <div id="reader" class="w-full max-w-xs rounded-xl overflow-hidden bg-black min-h-[200px]"></div>
+        <!-- Input darurat / simulasi pembacaan ID Pesanan -->
+        <input id="scannedOrderIdInput" type="text" placeholder="Atau ketik/masukkan Order ID manual..." class="mt-3 w-full max-w-xs text-xs p-2 rounded-xl text-zinc-950 font-bold text-center outline-none" onkeypress="if(event.key==='Enter') processScannedOrderId(this.value)">
+      </div>
+      <button onclick="processScannedOrderId(document.getElementById('scannedOrderIdInput').value)" class="w-full bg-purple-900 hover:bg-purple-950 text-white py-3 rounded-xl text-xs font-bold shadow-md">
+        🔍 Cari Berdasarkan ID / Barcode
+      </button>
+    </div>
+    <!-- Kontainer Hasil Data Pesanan yang Ditemukan -->
+    <div id="scanResultContainer" class="hidden mt-4 space-y-4">
+      <div class="p-4 bg-purple-50 rounded-2xl border border-purple-200">
+        <div class="flex justify-between items-center mb-2">
+          <span id="resOrderId" class="font-bold text-sm text-purple-950"></span>
+          <span id="resOrderStatus" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full"></span>
+        </div>
+        <div class="text-xs text-zinc-700 space-y-1">
+          <p><b>Pembeli:</b> <span id="resBuyerName"></span> (<span id="resBuyerPhone"></span>)</p>
+          <p><b>Alamat:</b> <span id="resBuyerAddress"></span></p>
+          <p><b>Opsi Kirim:</b> <span id="resDeliveryMethod"></span></p>
+        </div>
+      </div>
+      <!-- Info Kurir Bertugas (Jika Diantarkan) -->
+      <div id="resCourierSection" class="hidden p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+        <p class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-2">🛵 Informasi Kurir Pengantar:</p>
+        <div class="flex items-center gap-3">
+          <img id="resCourierPhoto" class="w-10 h-10 rounded-full object-cover border border-emerald-300">
+          <div>
+            <p id="resCourierName" class="text-xs font-bold text-emerald-950"></p>
+            <p id="resCourierPhone" class="text-xs text-emerald-800 font-medium"></p>
+          </div>
+        </div>
+      </div>
+      <!-- Rincian Barang -->
+      <div class="bg-[#faf6f3] p-4 rounded-2xl border border-zinc-200 text-xs space-y-2">
+        <p class="font-bold text-zinc-900">📦 Daftar Barang Pesanan:</p>
+        <div id="resItemsList" class="space-y-1"></div>
+        <div class="border-t pt-2 flex justify-between font-bold text-zinc-900">
+          <span>Total Pembayaran:</span>
+          <span id="resTotalPayment" class="text-purple-900"></span>
+        </div>
+      </div>
+      <button onclick="document.getElementById('scanResultContainer').classList.add('hidden'); document.getElementById('scannerCameraContainer').classList.remove('hidden'); startCameraScanner();" class="w-full bg-zinc-200 hover:bg-zinc-300 text-zinc-700 py-2.5 rounded-xl text-xs font-bold">
+        🔄 Scan Barcode Lainnya
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Pilih Kurir (Admin) -->
 <div id="courierModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
@@ -250,7 +314,9 @@ let siteSettings = {
   ],
   bannerTitle1: "Koleksi Terbaru",
   bannerTitle2: "Jish Store",
-  bannerDesc: "Pilihan produk harian kualitas terbaik"
+  bannerDesc: "Pilihan produk harian kualitas terbaik",
+  showGateProducts: true,
+  selectedGateProductIds: []
 };
 let categorySizes = {};
 let deliverySettings = {
@@ -294,6 +360,58 @@ let selectedAdminChatEmail = null;
 let financeDateFilter = 'all';
 let currentBannerIndex = 0;
 let bannerInterval = null;
+
+// --- VARIABEL & FUNGSI HTML5-QRCODE SCANNER ---
+let html5QrCodeScanner = null;
+
+function openScanModal() {
+  document.getElementById('scannedOrderIdInput').value = '';
+  document.getElementById('scanResultContainer').classList.add('hidden');
+  document.getElementById('scannerCameraContainer').classList.remove('hidden');
+  document.getElementById('scanModal').classList.remove('hidden');
+  setTimeout(() => {
+    startCameraScanner();
+  }, 300);
+}
+
+function closeScanModal() {
+  stopCameraScanner();
+  document.getElementById('scanModal').classList.add('hidden');
+}
+
+function startCameraScanner() {
+  if (window.Html5Qrcode) {
+    if (!html5QrCodeScanner) {
+      html5QrCodeScanner = new Html5Qrcode("reader");
+    }
+    html5QrCodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 200, height: 200 } },
+      (decodedText, decodedResult) => {
+        showToast('QR Code berhasil dipindai!');
+        stopCameraScanner();
+        document.getElementById('scannedOrderIdInput').value = decodedText;
+        processScannedOrderId(decodedText);
+      },
+      (errorMessage) => {
+        // Error frame scanning diabaikan agar terus memindai
+      }
+    ).catch((err) => {
+      console.warn("Tidak dapat mengakses kamera:", err);
+      showToast('Gagal mengakses kamera. Gunakan input manual.');
+    });
+  }
+}
+
+function stopCameraScanner() {
+  if (html5QrCodeScanner) {
+    html5QrCodeScanner.stop().then(() => {
+      html5QrCodeScanner.clear();
+    }).catch((err) => {
+      console.warn("Gagal menghentikan scanner:", err);
+    });
+  }
+}
 
 // --- WEB AUDIO API ---
 function playNotificationSound() {
@@ -427,89 +545,88 @@ function startBannerSlider(imgElementId) {
   }, 4000);
 }
 
-// --- FUNGSI KLIK PRODUK DI HALAMAN GATE UNTUK TAMU ---
-function handleGuestProductClick(productId) {
-  showToast('Silakan daftar atau masuk akun terlebih dahulu untuk membeli produk!');
+function gate() {
+  const allProds = getAllProducts();
+  let displayProducts = [];
+  if (siteSettings.selectedGateProductIds && siteSettings.selectedGateProductIds.length > 0) {
+    displayProducts = allProds.filter(p => siteSettings.selectedGateProductIds.includes(String(p.id)));
+  } else {
+    displayProducts = allProds.slice(0, 6);
+  }
+
+  return `
+    <div class="min-h-screen bg-[#faf6f3] py-10 px-4 sm:px-6 flex flex-col items-center relative">
+      <div class="absolute top-6 right-6 z-10">
+        <button onclick="openScanModal()" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5 hover:bg-zinc-800 transition-all">
+          <span>📷</span> <span>Scan Resi / Struk</span>
+        </button>
+      </div>
+
+      <div class="w-full max-w-4xl mx-auto space-y-8 mt-6 sm:mt-0">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-zinc-100 text-center relative overflow-hidden">
+          <div class="absolute -right-10 -top-10 w-40 h-40 bg-purple-100 rounded-full blur-2xl opacity-65 pointer-events-none"></div>
+          <h1 class="serif text-4xl sm:text-5xl leading-none tracking-wide mb-3">${siteSettings.storeName}</h1>
+          <p class="text-xs sm:text-sm text-zinc-500 max-w-md mx-auto mb-6">Temukan koleksi produk pilihan terbaik kami. Masuk atau daftar akun untuk mulai berbelanja.</p>
+          
+          <div class="flex flex-col sm:flex-row justify-center gap-3 max-w-xs sm:max-w-md mx-auto">
+            <button onclick="view='login';render()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-xs sm:text-sm shadow-md active:scale-98 transition-all">
+              🛍️ Masuk Sebagai Pembeli
+            </button>
+            <button onclick="view='loginAdmin';render()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full font-medium text-xs sm:text-sm shadow-md active:scale-98 transition-all">
+              🔒 Masuk Admin
+            </button>
+          </div>
+        </div>
+
+        ${siteSettings.showGateProducts !== false ? `
+          <div class="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-zinc-100">
+            <div class="flex justify-between items-center mb-5">
+              <div>
+                <h3 class="serif text-2xl font-bold text-zinc-900">✨ Produk Unggulan Pilihan</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Klik produk di bawah untuk mendaftar dan mulai checkout.</p>
+              </div>
+              <button onclick="view='login';render()" class="text-xs font-bold text-[#a48bc1] hover:underline">Lihat Semua →</button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              ${displayProducts.length > 0 ? displayProducts.map(p => `
+                <div onclick="handleGateProductClick()" class="bg-[#faf6f3] rounded-2xl p-3 flex flex-col justify-between cursor-pointer group hover:shadow-md transition-all border border-zinc-200/60">
+                  <div>
+                    <div class="overflow-hidden rounded-xl relative mb-2.5">
+                      <img src="${p.image}" class="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300">
+                      <span class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm">
+                        Rp ${(p.price/1000).toFixed(0)}k
+                      </span>
+                    </div>
+                    <p class="text-xs font-semibold text-zinc-800 line-clamp-1 group-hover:text-purple-700 transition-colors">${p.name}</p>
+                    <span class="inline-block mt-1 bg-purple-100 text-purple-900 text-[9px] font-bold px-2 py-0.5 rounded-md truncate max-w-full">${p.cat}</span>
+                  </div>
+                  <button class="w-full mt-3 bg-black text-white py-2 rounded-xl text-[10px] font-bold shadow-sm group-hover:bg-[#cbb6e2] transition-colors">
+                    Daftar ➔
+                  </button>
+                </div>
+              `).join('') : `
+                <div class="col-span-full py-8 text-center text-zinc-400 text-xs">
+                  Belum ada produk unggulan yang dipilih di tab Tampilan Toko.
+                </div>
+              `}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="text-center pb-6">
+          <p class="text-xs text-zinc-400">Belum punya akun pembeli? <button onclick="view='register';render()" class="text-purple-700 font-bold hover:underline">Daftar Akun Baru di Sini</button></p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleGateProductClick() {
+  showToast('Silakan daftar atau masuk akun terlebih dahulu untuk checkout!');
   setTimeout(() => {
     view = 'register';
     render();
-  }, 1500);
-}
-
-function gate() {
-  const allProds = getAllProducts();
-  
-  // Mengelompokkan produk unik berdasarkan kategori berbeda untuk ditampilkan di Gate
-  const categoriesMap = {};
-  allProds.forEach(p => {
-    const cat = p.cat || 'General';
-    if (!categoriesMap[cat]) {
-      categoriesMap[cat] = p; // Mengambil 1 produk pertama per kategori
-    }
-  });
-  const categoryRepresentativeProducts = Object.values(categoriesMap).slice(0, 4);
-
-  return `
-    <div class="min-h-screen bg-[#faf6f3] py-10 px-4 sm:px-6">
-      <div class="max-w-4xl mx-auto space-y-8">
-        
-        <!-- Bagian Kartu Utama Akses Masuk -->
-        <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm mx-auto shadow-sm border border-zinc-100 text-center">
-          <h1 class="serif text-4xl leading-none tracking-wide mb-3">${siteSettings.storeName}</h1>
-          <p class="text-xs text-zinc-500 mb-6">${siteSettings.bannerDesc || 'Pilihan produk harian kualitas terbaik'}</p>
-          
-          <p class="text-xs font-semibold text-zinc-700 mb-4">Pilih Akses Masuk</p>
-          <div class="space-y-3">
-            <button onclick="view='login';render()" class="w-full bg-[#cbb6e2] hover:bg-[#b79ed1] text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
-              🛍️ Masuk Sebagai Pembeli
-            </button>
-            <button onclick="view='loginAdmin';render()" class="w-full bg-black hover:bg-zinc-800 text-white py-3.5 rounded-full font-medium text-sm shadow-md active:scale-98 transition-all">
-              🔒 Masuk Sebagai Admin
-            </button>
-          </div>
-          <div class="mt-6 border-t pt-4">
-            <p class="text-xs text-zinc-500">Belum punya akun pembeli?</p>
-            <button onclick="view='register';render()" class="text-[#a48bc1] hover:underline font-bold text-xs mt-1">Daftar Akun Baru</button>
-          </div>
-        </div>
-
-        <!-- Bagian Etalase Katalog Produk Dari Kategori Berbeda -->
-        <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-zinc-100">
-          <div class="flex justify-between items-center mb-4">
-            <div>
-              <h2 class="font-bold text-base text-zinc-900">✨ Jelajahi Berbagai Kategori</h2>
-              <p class="text-xs text-zinc-400">Daftar atau masuk untuk mulai belanja dan checkout pesanan</p>
-            </div>
-            <span class="text-xs bg-purple-100 text-purple-800 font-bold px-3 py-1 rounded-full">Katalog Berbeda</span>
-          </div>
-
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            ${categoryRepresentativeProducts.length > 0 ? categoryRepresentativeProducts.map(p => `
-              <div onclick="handleGuestProductClick(${p.id})" class="bg-[#faf6f3] rounded-2xl p-3 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group border border-zinc-200/60">
-                <div>
-                  <div class="relative overflow-hidden rounded-xl mb-2">
-                    <img src="${p.image}" class="w-full h-32 sm:h-36 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105">
-                    <span class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
-                      Rp ${(p.price/1000).toFixed(0)}k
-                    </span>
-                  </div>
-                  <p class="text-xs font-semibold text-zinc-800 line-clamp-1 group-hover:text-[#a48bc1] transition-colors">${p.name}</p>
-                  <p class="text-[10px] text-purple-700 font-bold mt-0.5">📂 ${p.cat}</p>
-                </div>
-                <button class="w-full mt-3 bg-zinc-900 group-hover:bg-[#cbb6e2] text-white py-2 rounded-xl text-[11px] font-bold transition-colors">
-                  🔒 Klik untuk Beli
-                </button>
-              </div>
-            `).join('') : `
-              <div class="col-span-full py-8 text-center text-xs text-zinc-400">
-                Belum ada produk yang ditambahkan ke toko.
-              </div>
-            `}
-          </div>
-        </div>
-
-      </div>
-    </div>`;
+  }, 1000);
 }
 
 function login() {
@@ -2285,6 +2402,42 @@ function admin() {
             <label class="text-xs font-bold text-zinc-700 block mb-1">Deskripsi Singkat Banner</label>
             <input id="st_desc" value="${siteSettings.bannerDesc}" class="w-full border border-zinc-200 bg-[#faf6f3] p-3 rounded-2xl text-xs font-medium outline-none focus:border-black">
           </div>
+
+          <!-- PENGATURAN ETALASE DI HALAMAN GATE -->
+          <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-purple-950 block">✨ Tampilkan Etalase Produk di Halaman Depan (Gate)</span>
+              <p class="text-[11px] text-purple-800">Menampilkan produk unggulan pilihan untuk tamu.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="st_showGate" ${siteSettings.showGateProducts !== false ? 'checked' : ''} class="sr-only peer">
+              <div class="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-900"></div>
+            </label>
+          </div>
+
+          <!-- PEMILIHAN PRODUK UNGGULAN HALAMAN GATE -->
+          <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
+            <div>
+              <span class="text-xs font-bold text-purple-950 block">✨ Pilih Produk untuk Ditampilkan di Halaman Depan (Gate)</span>
+              <p class="text-[11px] text-purple-800">Centang produk-produk yang ingin Anda tampilkan sebagai etalase unggulan tamu.</p>
+            </div>
+            <div class="max-h-48 overflow-y-auto space-y-1.5 bg-white p-3 rounded-xl border border-purple-200 no-scrollbar">
+              ${getAllProducts().map(p => {
+                const isChecked = siteSettings.selectedGateProductIds && siteSettings.selectedGateProductIds.includes(String(p.id));
+                return `
+                  <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-purple-50 cursor-pointer text-xs">
+                    <input type="checkbox" name="gateProductCheckbox" value="${p.id}" ${isChecked ? 'checked' : ''} class="accent-purple-900 w-4 h-4 rounded">
+                    <img src="${p.image}" class="w-8 h-8 rounded-lg object-cover border">
+                    <div class="flex-1 truncate">
+                      <span class="font-bold text-zinc-900">${p.name}</span>
+                      <span class="text-[10px] text-zinc-500 block">${p.cat} • Rp ${p.price.toLocaleString('id-ID')}</span>
+                    </div>
+                  </label>
+                `;
+              }).join('') || '<p class="text-xs text-zinc-400 text-center py-2">Belum ada produk tersedia.</p>'}
+            </div>
+          </div>
+
           <div class="p-4 bg-purple-50/50 rounded-2xl border border-purple-200 space-y-2">
             <span class="text-xs font-bold text-purple-950 block">👀 Pratinjau Langsung (Live Preview) Banner Slider:</span>
             <div class="rounded-2xl overflow-hidden relative h-48 shadow-inner bg-zinc-900">
@@ -2654,7 +2807,7 @@ function openRestockModal(id) {
   if (!p) return;
   if (p.hasVariations && p.colors && p.colors.length > 0) {
     let colorOptionsText = p.colors.map((c, idx) => `${idx + 1}. ${c.name}`).join('\n');
-    let colorChoice = prompt(`📦 RESTOK PRODUK BERVARIASI: "${p.name}"\n\nPilih nomor warna yang ingin ditambahkan stoknya:\n${colorOptionsText}\n\nMasukkan nomor pilihan (1-${p.colors.length}):`, "1");
+    let colorChoice = prompt(`📦 RESTOK PRODUK BERVARIASI: "${p.name}"\n\Pilih nomor warna yang ingin ditambahkan stoknya:\n${colorOptionsText}\n\nMasukkan nomor pilihan (1-${p.colors.length}):`, "1");
     if (!colorChoice) return;
     let cIdx = Number(colorChoice) - 1;
     if (isNaN(cIdx) || !p.colors[cIdx]) return alert('Pilihan warna tidak valid!');
@@ -2721,7 +2874,7 @@ function deleteExpense(id) {
   }
 }
 
-// --- CETAK STRUK & RESI ALAMAT TERPISAH ---
+// --- CETAK STRUK & RESI ALAMAT TERPISAH (DENGAN QR CODE) ---
 function printOrderReceipt(orderId) {
   const o = orders.find(x => x.id === orderId);
   if (!o) return;
@@ -2758,14 +2911,32 @@ function printOrderReceipt(orderId) {
           <span>TOTAL:</span><span>Rp ${o.total.toLocaleString('id-ID')}</span>
         </div>
       </div>
-      <div style="text-align: center; border-top: 1px dashed black; margin-top: 15px; padding-top: 10px; font-size: 10px;">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 15px; border-top: 1px dashed black; padding-top: 10px;">
+        <div id="qrcodeReceipt" style="margin-bottom: 5px;"></div>
+        <p style="margin: 0; font-size: 9px;">Scan untuk detail pesanan</p>
+      </div>
+      <div style="text-align: center; border-top: 1px dashed black; margin-top: 10px; padding-top: 10px; font-size: 10px;">
         <p style="margin: 0;">Terima Kasih Telah Berbelanja!</p>
         <p style="margin: 2px 0; font-weight: bold;">${siteSettings.storeName}</p>
       </div>
     </div>
   `;
-  window.print();
-  document.body.className = "";
+  setTimeout(() => {
+    const qrContainer = document.getElementById('qrcodeReceipt');
+    if (qrContainer) {
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: String(o.id),
+        width: 60,
+        height: 60,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+    window.print();
+    document.body.className = "";
+  }, 100);
 }
 
 function printAddressLabel(orderId) {
@@ -2784,11 +2955,17 @@ function printAddressLabel(orderId) {
           #${o.id}
         </div>
       </div>
-      <div style="margin-bottom: 15px; font-size: 13px;">
-        <p style="margin: 4px 0; font-size: 11px; text-transform: uppercase; color: #777; font-weight: bold;">Penerima:</p>
-        <p style="margin: 4px 0; font-size: 16px; font-weight: bold;">${o.buyerName}</p>
-        <p style="margin: 4px 0;">📱 ${o.buyerPhone}</p>
-        <p style="margin: 4px 0; line-height: 1.4;">📍 ${o.buyerAddress}</p>
+      <div style="display: flex; gap: 15px; align-items: start; margin-bottom: 15px;">
+        <div style="flex: 1; font-size: 13px;">
+          <p style="margin: 4px 0; font-size: 11px; text-transform: uppercase; color: #777; font-weight: bold;">Penerima:</p>
+          <p style="margin: 4px 0; font-size: 16px; font-weight: bold;">${o.buyerName}</p>
+          <p style="margin: 4px 0;">📱 ${o.buyerPhone}</p>
+          <p style="margin: 4px 0; line-height: 1.4;">📍 ${o.buyerAddress}</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f9f9f9; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+          <div id="qrcodeResi"></div>
+          <span style="font-size: 8px; margin-top: 4px; font-weight: bold;">ID: #${o.id}</span>
+        </div>
       </div>
       <div style="border-top: 1px dashed #999; padding-top: 12px; font-size: 12px; margin-bottom: 15px;">
         <p style="margin: 2px 0; font-weight: bold;">Kurir Bertugas: ${o.courier ? o.courier.name + ' (' + o.courier.phone + ')' : 'Belum ditentukan'}</p>
@@ -2800,8 +2977,65 @@ function printAddressLabel(orderId) {
       </div>
     </div>
   `;
-  window.print();
-  document.body.className = "";
+  setTimeout(() => {
+    const qrContainer = document.getElementById('qrcodeResi');
+    if (qrContainer) {
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: String(o.id),
+        width: 80,
+        height: 80,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+    window.print();
+    document.body.className = "";
+  }, 100);
+}
+
+function processScannedOrderId(orderIdStr) {
+  const cleanId = orderIdStr.trim().replace('#', '');
+  if (!cleanId) return showToast('Masukkan atau scan Order ID yang valid!');
+  const foundOrder = orders.find(x => String(x.id) === cleanId);
+  if (!foundOrder) {
+    return showToast(`Pesanan dengan ID #${cleanId} tidak ditemukan dalam database!`);
+  }
+  document.getElementById('resOrderId').innerText = `Order ID: #${foundOrder.id} (${foundOrder.date})`;
+  const statusEl = document.getElementById('resOrderStatus');
+  statusEl.innerText = foundOrder.status;
+  statusEl.className = `text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+    foundOrder.status==='Selesai'?'bg-emerald-100 text-emerald-800':
+    foundOrder.status==='Dalam Pengiriman'?'bg-purple-100 text-purple-800':'bg-amber-100 text-amber-800'
+  }`;
+  document.getElementById('resBuyerName').innerText = foundOrder.buyerName;
+  document.getElementById('resBuyerPhone').innerText = foundOrder.buyerPhone;
+  document.getElementById('resBuyerAddress').innerText = foundOrder.buyerAddress;
+  document.getElementById('resDeliveryMethod').innerText = foundOrder.deliveryMethod;
+  document.getElementById('resTotalPayment').innerText = `Rp ${foundOrder.total.toLocaleString('id-ID')}`;
+  
+  const courierSection = document.getElementById('resCourierSection');
+  if (foundOrder.courier) {
+    document.getElementById('resCourierName').innerText = foundOrder.courier.name;
+    document.getElementById('resCourierPhone').innerText = foundOrder.courier.phone;
+    document.getElementById('resCourierPhoto').src = foundOrder.courier.photo;
+    courierSection.classList.remove('hidden');
+  } else {
+    courierSection.classList.add('hidden');
+  }
+
+  const itemsListEl = document.getElementById('resItemsList');
+  itemsListEl.innerHTML = foundOrder.items.map(it => `
+    <div class="flex justify-between">
+      <span>${it.name} (${it.qty}x) ${it.color ? '['+it.color+']' : ''}</span>
+      <span class="font-bold">Rp ${(it.price * it.qty).toLocaleString('id-ID')}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('scannerCameraContainer').classList.add('hidden');
+  document.getElementById('scanResultContainer').classList.remove('hidden');
+  showToast('Data pesanan berhasil dicocokkan!');
 }
 
 function removeBannerImage(index) {
@@ -3323,14 +3557,23 @@ function saveSiteSettings() {
   const stT1 = document.getElementById('st_t1').value.trim();
   const stT2 = document.getElementById('st_t2').value.trim();
   const stDesc = document.getElementById('st_desc').value.trim();
+  const showGate = document.getElementById('st_showGate').checked;
+
+  const checkedCheckboxes = document.querySelectorAll('input[name="gateProductCheckbox"]:checked');
+  const selectedIds = Array.from(checkedCheckboxes).map(cb => cb.value);
+
   if (!stName) return showToast('Nama toko tidak boleh kosong!');
+  
   siteSettings.storeName = stName;
   siteSettings.bannerTitle1 = stT1;
   siteSettings.bannerTitle2 = stT2;
   siteSettings.bannerDesc = stDesc;
+  siteSettings.showGateProducts = showGate;
+  siteSettings.selectedGateProductIds = selectedIds;
+
   save();
   render();
-  showToast('Tampilan toko berhasil diperbarui!');
+  showToast('Tampilan toko & pilihan produk unggulan berhasil disimpan!');
 }
 
 function handleSaveAdminSettings() {
